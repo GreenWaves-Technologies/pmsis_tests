@@ -9,7 +9,8 @@
  */
 
 #include "pmsis.h"
-#include "pmsis/cluster/dma/cl_dma.h"
+#include "pmsis_cluster/dma/cl_dma.h"
+#include "rtos/pmsis_os.h"
 #include "stdio.h"
 
 #define BUFF_SIZE 2048

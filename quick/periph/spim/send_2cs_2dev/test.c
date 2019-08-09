@@ -69,9 +69,9 @@ static int test_entry()
   pi_task_t event1;
   pi_task_t event2;
 
-  pi_spi_send_async(&spim0, tx_buffer[0], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task_block(&event0));
-  pi_spi_send_async(&spim1, tx_buffer[1], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task_block(&event1));
-  pi_spi_send_async(&spim2, tx_buffer[2], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task_block(&event2));
+  pi_spi_send_async(&spim0, tx_buffer[0], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task(&event0));
+  pi_spi_send_async(&spim1, tx_buffer[1], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task(&event1));
+  pi_spi_send_async(&spim2, tx_buffer[2], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task(&event2));
 
   pi_task_wait_on(&event0);
   pi_task_wait_on(&event1);
@@ -81,9 +81,9 @@ static int test_entry()
   set_spim_verif_command(&spim1, 0x2, 0, BUFFER_SIZE, cmd_buffer[0], NULL);
   set_spim_verif_command(&spim2, 0x2, 0, BUFFER_SIZE, cmd_buffer[0], NULL);
 
-  pi_spi_receive_async(&spim0, rx_buffer[0], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task_block(&event0));
-  pi_spi_receive_async(&spim1, rx_buffer[1], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task_block(&event1));
-  pi_spi_receive_async(&spim2, rx_buffer[2], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task_block(&event2));
+  pi_spi_receive_async(&spim0, rx_buffer[0], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task(&event0));
+  pi_spi_receive_async(&spim1, rx_buffer[1], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task(&event1));
+  pi_spi_receive_async(&spim2, rx_buffer[2], BUFFER_SIZE*8, PI_SPI_CS_AUTO, pi_task(&event2));
 
   pi_task_wait_on(&event0);
   pi_task_wait_on(&event1);

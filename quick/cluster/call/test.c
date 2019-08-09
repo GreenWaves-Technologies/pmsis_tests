@@ -10,10 +10,11 @@
 
 #include "pmsis.h"
 #include "stdio.h"
-#include "pmsis/cluster/cluster_sync/fc_to_cl_delegate.h"
-#include "pmsis/task.h"
-#include "pmsis/device.h"
-#include "pmsis/rtos/pmsis_os.h"
+#include "pmsis_cluster/cluster_sync/fc_to_cl_delegate.h"
+#include "rtos/pmsis_driver_core_api/pmsis_driver_core_api.h"
+#include "rtos/os_frontend_api/pmsis_task.h"
+#include "rtos/event_kernel/event_kernel.h"
+#include "rtos/pmsis_os.h"
 
 #define NB_CALL 1024
 #define NB_TASKS 32
@@ -82,7 +83,7 @@ static int test_task_async()
   {
     for (int j=0; j<NB_TASKS; j++)
     {
-      pi_cluster_send_task_to_cl_async(&cluster_dev, &task[j], pi_task_block(&events[j]));
+      pi_cluster_send_task_to_cl_async(&cluster_dev, &task[j], pi_task(&events[j]));
     }
     for (int j=0; j<NB_TASKS; j++)
     {

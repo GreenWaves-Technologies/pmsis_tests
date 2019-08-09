@@ -8,9 +8,11 @@
  */
 
 #include "pmsis.h"
-#include "pmsis/task.h"
+#include "rtos/os_frontend_api/pmsis_task.h"
 #include "stdio.h"
-#include "pmsis/drivers/hyperbus.h"
+#include "rtos/pmsis_os.h"
+#include "rtos/pmsis_driver_core_api/pmsis_driver_core_api.h"
+#include "drivers/hyperbus.h"
 
 #define BUFF_SIZE 2048
 

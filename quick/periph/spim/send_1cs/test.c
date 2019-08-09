@@ -107,14 +107,14 @@ static int test_entry()
 
   for (int i=0; i<NB_BUFFERS; i++)
   {
-    set_spim_verif_command(&spim, 0x1, buffer_size*i, buffer_size, cmd_buffer[i], pi_task_block(&cmd_event[i]));
-    pi_spi_send_async(&spim, tx_buffer+buffer_size*i, buffer_size*8, PI_SPI_CS_AUTO, pi_task_block(&buf_event[i]));
+    set_spim_verif_command(&spim, 0x1, buffer_size*i, buffer_size, cmd_buffer[i], pi_task(&cmd_event[i]));
+    pi_spi_send_async(&spim, tx_buffer+buffer_size*i, buffer_size*8, PI_SPI_CS_AUTO, pi_task(&buf_event[i]));
   }
 
   for (int i=0; i<NB_BUFFERS; i++)
   {
-    set_spim_verif_command(&spim, 0x2, buffer_size*i, buffer_size, rx_cmd_buffer[i], pi_task_block(&rx_cmd_event[i]));
-    pi_spi_receive_async(&spim, rx_buffer+buffer_size*i, buffer_size*8, PI_SPI_CS_AUTO, pi_task_block(&rx_buf_event[i]));
+    set_spim_verif_command(&spim, 0x2, buffer_size*i, buffer_size, rx_cmd_buffer[i], pi_task(&rx_cmd_event[i]));
+    pi_spi_receive_async(&spim, rx_buffer+buffer_size*i, buffer_size*8, PI_SPI_CS_AUTO, pi_task(&rx_buf_event[i]));
   }
 
   for (int i=0; i<NB_BUFFERS; i++)
@@ -150,15 +150,15 @@ static int test_entry()
   for (int i=0; i<NB_BUFFERS; i++)
   {
     int mode = i == NB_BUFFERS - 1 ? PI_SPI_CS_AUTO : PI_SPI_CS_KEEP;
-    pi_spi_send_async(&spim, tx_buffer+buffer_size*i, buffer_size*8, mode, pi_task_block(&buf_event[i]));
+    pi_spi_send_async(&spim, tx_buffer+buffer_size*i, buffer_size*8, mode, pi_task(&buf_event[i]));
   }
 
-  set_spim_verif_command(&spim, 0x2, 0, total_size, cmd_buffer[0], pi_task_block(&cmd_event[0]));
+  set_spim_verif_command(&spim, 0x2, 0, total_size, cmd_buffer[0], pi_task(&cmd_event[0]));
 
   for (int i=0; i<NB_BUFFERS; i++)
   {
     int mode = i == NB_BUFFERS - 1 ? PI_SPI_CS_AUTO : PI_SPI_CS_KEEP;
-    pi_spi_receive_async(&spim, rx_buffer+buffer_size*i, buffer_size*8, mode, pi_task_block(&rx_buf_event[i]));
+    pi_spi_receive_async(&spim, rx_buffer+buffer_size*i, buffer_size*8, mode, pi_task(&rx_buf_event[i]));
   }
 
   pi_task_wait_on(&cmd_event[0]);
