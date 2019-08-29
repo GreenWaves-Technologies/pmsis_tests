@@ -6,11 +6,11 @@
 #define NB_BUFFERS 4
 #define SIZE (BUFFER_SIZE/NB_BUFFERS)
 
-L2_DATA int32_t cmd_buffer[4][2];
+PI_L2 int32_t cmd_buffer[4][2];
 
-L2_DATA uint8_t tx_buffer[3][BUFFER_SIZE];
+PI_L2 uint8_t tx_buffer[3][BUFFER_SIZE];
 
-L2_DATA uint8_t rx_buffer[3][BUFFER_SIZE];
+PI_L2 uint8_t rx_buffer[3][BUFFER_SIZE];
 
 static void set_spim_verif_command(struct pi_device *spim, int cmd, int addr, int size, int32_t *cmd_buffer, pi_task_t *event)
 {

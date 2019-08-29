@@ -16,7 +16,7 @@
 
 static inline void get_info(int *buffer_size)
 {
-#ifdef __ZEPHYR__
+#if !defined( ARCHI_PLATFORM_RTL)
   *buffer_size = TOTAL_SIZE;
 #else
   if (rt_platform() == ARCHI_PLATFORM_RTL)
@@ -32,12 +32,12 @@ static inline void get_info(int *buffer_size)
 
 
 
-L2_DATA int32_t cmd_buffer[4][2];
-L2_DATA int32_t rx_cmd_buffer[4][2];
+PI_L2 int32_t cmd_buffer[4][2];
+PI_L2 int32_t rx_cmd_buffer[4][2];
 
-L2_DATA uint8_t *tx_buffer;
+PI_L2 uint8_t *tx_buffer;
 
-L2_DATA uint8_t *rx_buffer;
+PI_L2 uint8_t *rx_buffer;
 
 static pi_task_t buf_event[NB_BUFFERS];
 static pi_task_t rx_buf_event[NB_BUFFERS];
