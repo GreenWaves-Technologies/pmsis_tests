@@ -100,7 +100,8 @@ static int test_task_async()
 
   pi_cluster_send_task_to_cl_async(&cluster_dev, &cluster_task, &task);
 
-  pi_task_wait_on(&task);
+  while (nb_callback_exec == 0)
+    pi_yield();
 
   if (nb_fork == 0)
     errors++;
