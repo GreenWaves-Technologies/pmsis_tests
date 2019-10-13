@@ -12,9 +12,16 @@
 #include "stdio.h"
 #include "pmsis/cluster/dma/cl_dma.h"
 
-#define BUFF_SIZE 4096
+#if STRIDE >= 0x10000
+#define BUFF_SIZE (STRIDE*2)
+#elif STRIDE >= 0x8000
+#define BUFF_SIZE (STRIDE*4)
+#elif STRIDE >= 0x4000
+#define BUFF_SIZE (STRIDE*6)
+#else
+#define BUFF_SIZE (STRIDE*8)
+#endif
 
-#define STRIDE 400
 #define LENGTH 300
 
 #define COPY_SIZE (BUFF_SIZE/STRIDE*LENGTH)
@@ -28,16 +35,17 @@ static void cluster_entry(void *arg)
   //printf("(%d, %d) Entered cluster got ptr %p\n", cl_cluster_id(), cl_core_id(), loc_buff);
 
   cl_dma_cmd_t copy;
+
   cl_dma_cmd_2d((int)ext_buff0, (int)loc_buff, COPY_SIZE, STRIDE, LENGTH, CL_DMA_DIR_EXT2LOC, &copy);
 
   cl_dma_cmd_wait(&copy);
 
-  for (int i=0; i<BUFF_SIZE; i++)
+  for (int i=0; i<COPY_SIZE; i++)
   {
     loc_buff[i] = (char )(loc_buff[i] * 3);
   }
 
-  cl_dma_cmd((int)ext_buff1, (int)loc_buff, BUFF_SIZE, CL_DMA_DIR_LOC2EXT, &copy);
+  cl_dma_cmd((int)ext_buff1, (int)loc_buff, COPY_SIZE, CL_DMA_DIR_LOC2EXT, &copy);
 
   cl_dma_cmd_wait(&copy);
 }
@@ -60,7 +68,9 @@ static int test_entry()
     
   pi_cluster_open(&cluster_dev);
 
-  loc_buff = pmsis_l1_malloc(BUFF_SIZE);
+  loc_buff = pmsis_l1_malloc(COPY_SIZE);
+  if (loc_buff == NULL)
+    return -1;
 
   for (int i=0; i<BUFF_SIZE; i++)
   {
@@ -69,7 +79,6 @@ static int test_entry()
     else
       ext_buff0[i] = 0;
   }
-
   pi_cluster_task(&cluster_task, cluster_entry, NULL);
 
   pi_cluster_send_task_to_cl(&cluster_dev, &cluster_task);
