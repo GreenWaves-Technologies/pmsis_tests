@@ -28,13 +28,13 @@ static void cluster_entry(void *arg)
 
   for (int j=0; j<NB_ITER; j++)
   {
-    cl_dma_cmd_t copy[NB_COPY];
+    pi_cl_dma_cmd_t copy[NB_COPY];
     for (int i=0; i<NB_COPY; i++)
-      cl_dma_cmd((int)ext_buff0 + COPY_SIZE*i + ITER_SIZE*j, (int)loc_buff + COPY_SIZE*i + ITER_SIZE*j, COPY_SIZE, CL_DMA_DIR_EXT2LOC, &copy[i]);
+      pi_cl_dma_cmd((int)ext_buff0 + COPY_SIZE*i + ITER_SIZE*j, (int)loc_buff + COPY_SIZE*i + ITER_SIZE*j, COPY_SIZE, PI_CL_DMA_DIR_EXT2LOC, &copy[i]);
 
 
     for (int i=0; i<NB_COPY; i++)
-      cl_dma_cmd_wait(&copy[i]);
+      pi_cl_dma_cmd_wait(&copy[i]);
 
     for (int i=0; i<BUFF_SIZE; i++)
     {
@@ -42,10 +42,10 @@ static void cluster_entry(void *arg)
     }
 
     for (int i=0; i<NB_COPY; i++)
-      cl_dma_cmd((int)ext_buff1 + COPY_SIZE*i + ITER_SIZE*j, (int)loc_buff + COPY_SIZE*i + ITER_SIZE*j, COPY_SIZE, CL_DMA_DIR_LOC2EXT, &copy[i]);
+      pi_cl_dma_cmd((int)ext_buff1 + COPY_SIZE*i + ITER_SIZE*j, (int)loc_buff + COPY_SIZE*i + ITER_SIZE*j, COPY_SIZE, PI_CL_DMA_DIR_LOC2EXT, &copy[i]);
 
     for (int i=0; i<NB_COPY; i++)
-      cl_dma_cmd_wait(&copy[i]);
+      pi_cl_dma_cmd_wait(&copy[i]);
   }
 }
 
@@ -56,7 +56,7 @@ static int test_entry()
 #if 1 //ef ARCHI_HAS_FC
 
   struct pi_device cluster_dev;
-  struct cluster_driver_conf conf;
+  struct pi_cluster_conf conf;
   struct pi_cluster_task cluster_task;
   struct pi_task task;
 

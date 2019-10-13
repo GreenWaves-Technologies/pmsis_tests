@@ -30,7 +30,7 @@ static void cluster_entry(void *arg)
 static int test_task_sync()
 {
   struct pi_device cluster_dev;
-  struct cluster_driver_conf conf;
+  struct pi_cluster_conf conf;
   struct pi_cluster_task task;
   int errors = 0;
 
@@ -61,7 +61,7 @@ static int test_task_sync()
 static int test_task_async()
 {
   struct pi_device cluster_dev;
-  struct cluster_driver_conf conf;
+  struct pi_cluster_conf conf;
   int errors = 0;
 
   nb_call = 0;

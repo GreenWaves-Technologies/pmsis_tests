@@ -34,20 +34,20 @@ static void cluster_entry(void *arg)
 {
   //printf("(%d, %d) Entered cluster got ptr %p\n", cl_cluster_id(), cl_core_id(), loc_buff);
 
-  cl_dma_cmd_t copy;
+  pi_cl_dma_cmd_t copy;
 
-  cl_dma_cmd_2d((int)ext_buff0, (int)loc_buff, COPY_SIZE, STRIDE, LENGTH, CL_DMA_DIR_EXT2LOC, &copy);
+  pi_cl_dma_cmd_2d((int)ext_buff0, (int)loc_buff, COPY_SIZE, STRIDE, LENGTH, PI_CL_DMA_DIR_EXT2LOC, &copy);
 
-  cl_dma_cmd_wait(&copy);
+  pi_cl_dma_cmd_wait(&copy);
 
   for (int i=0; i<COPY_SIZE; i++)
   {
     loc_buff[i] = (char )(loc_buff[i] * 3);
   }
 
-  cl_dma_cmd((int)ext_buff1, (int)loc_buff, COPY_SIZE, CL_DMA_DIR_LOC2EXT, &copy);
+  pi_cl_dma_cmd((int)ext_buff1, (int)loc_buff, COPY_SIZE, PI_CL_DMA_DIR_LOC2EXT, &copy);
 
-  cl_dma_cmd_wait(&copy);
+  pi_cl_dma_cmd_wait(&copy);
 }
 
 static int test_entry()
@@ -58,7 +58,7 @@ static int test_entry()
 #if 1 //def ARCHI_HAS_FC
 
   struct pi_device cluster_dev;
-  struct cluster_driver_conf conf;
+  struct pi_cluster_conf conf;
   struct pi_cluster_task cluster_task;
   struct pi_task task;
 

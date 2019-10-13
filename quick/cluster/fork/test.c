@@ -21,17 +21,17 @@ static int nb_callback_exec;
 static void pe_entry(void *arg)
 {
   int *var = (int *)arg;
-  cl_team_critical_enter();
+  pi_cl_team_critical_enter();
   *var |= 1 << (pi_core_id());
-  cl_team_critical_exit();
+  pi_cl_team_critical_exit();
 }
 
 static int check_fork(int nb_cores)
 {
   unsigned int var = 0;
   nb_fork++;
-  cl_team_fork(nb_cores, pe_entry, (void *)&var);
-  return (1<<cl_team_nb_cores()) - 1 != var;
+  pi_cl_team_fork(nb_cores, pe_entry, (void *)&var);
+  return (1<<pi_cl_team_nb_cores()) - 1 != var;
 }
 
 static void cluster_entry(void *arg)
@@ -48,7 +48,7 @@ static void cluster_entry(void *arg)
 static int test_task_sync()
 {
   struct pi_device cluster_dev;
-  struct cluster_driver_conf conf;
+  struct pi_cluster_conf conf;
   struct pi_cluster_task task;
   int errors = 0;
 
@@ -79,7 +79,7 @@ static void cluster_task_callback(void *arg)
 static int test_task_async()
 {
   struct pi_device cluster_dev;
-  struct cluster_driver_conf conf;
+  struct pi_cluster_conf conf;
   struct pi_cluster_task cluster_task;
   struct pi_task task;
   int errors = 0;
