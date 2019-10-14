@@ -26,8 +26,8 @@
 
 #define COPY_SIZE (BUFF_SIZE/STRIDE*LENGTH)
 
-static char ext_buff0[BUFF_SIZE];
-static char ext_buff1[BUFF_SIZE];
+static char *ext_buff0;
+static char *ext_buff1;
 static char *loc_buff;
 
 static void cluster_entry(void *arg)
@@ -61,6 +61,11 @@ static int test_entry()
   struct pi_cluster_conf conf;
   struct pi_cluster_task cluster_task;
   struct pi_task task;
+
+  ext_buff0 = pi_l2_malloc(BUFF_SIZE);
+  ext_buff1 = pi_l2_malloc(BUFF_SIZE);
+  if (ext_buff0 == NULL || ext_buff1 == NULL)
+    return -1;
 
   pi_cluster_conf_init(&conf);
 
