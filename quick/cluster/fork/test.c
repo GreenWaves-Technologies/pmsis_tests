@@ -37,7 +37,7 @@ static int check_fork(int nb_cores)
 static void cluster_entry(void *arg)
 {
   int *errors = (int *)arg;
-  for (int i=0; i<=pi_nb_cluster_cores(); i++)
+  for (int i=0; i<=pi_cl_cluster_nb_cores(); i++)
   {
     *errors += check_fork(i);
     if (i != 0)
