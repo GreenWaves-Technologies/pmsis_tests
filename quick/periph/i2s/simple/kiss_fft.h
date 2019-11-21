@@ -1,7 +1,7 @@
 #ifndef KISS_FFT_H
 #define KISS_FFT_H
 
-#include <rt/rt_api.h>
+#include <pmsis.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -25,7 +25,7 @@ extern "C" {
 */
 
 #if 1
-#define KISS_FFT_MALLOC(nbytes) rt_alloc(RT_ALLOC_FC_DATA, nbytes)
+#define KISS_FFT_MALLOC(nbytes) pi_fc_tcdm_malloc(nbytes)
 #define KISS_FFT_FREE 
 #else
 #ifdef USE_SIMD
