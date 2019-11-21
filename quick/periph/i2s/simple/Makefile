@@ -3,6 +3,10 @@ APP_SRCS = test.c kiss_fft.c
 APP_CFLAGS = -O3 -g
 APP_LDFLAGS = -lm -lgcc
 
+ifdef GAP_SDK_HOME
+CONFIG_BUILD_DIR = $(BUILDDIR)
+endif
+
 RUNNER_CONFIG = $(CURDIR)/config.ini
 
 STIM_WAV_0_0 ?= $(CONFIG_BUILD_DIR)/stim_0_0.wav
