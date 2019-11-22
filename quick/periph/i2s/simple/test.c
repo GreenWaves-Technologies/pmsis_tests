@@ -24,17 +24,24 @@
 #define NB_ITF 1
 #endif
 
-#ifndef NB_CHANNEL
-#define NB_CHANNEL 1
+#ifndef NB_CHANNELS
+#define NB_CHANNELS 1
 #endif
 
 #define ERROR_RATE 20
+#if WORD_SIZE == 32
+#define ELEM_SIZE 4
+#elif WORD_SIZE == 16
 #define ELEM_SIZE 2
+#else
+#error Unsupported word size
+#endif
 #define NB_ELEM 256
 #define BUFF_SIZE ((NB_ELEM+16)*ELEM_SIZE)
 #define BLOCK_SIZE (NB_ELEM*ELEM_SIZE)
 
-static uint8_t buff[NB_ITF][2][BUFF_SIZE*NB_CHANNEL];
+static uint8_t buff[NB_ITF][2][BUFF_SIZE*NB_CHANNELS];
+static uint8_t ch_buff[NB_ITF][NB_CHANNELS][BUFF_SIZE];
 
 
 
@@ -54,21 +61,21 @@ static int get_signal_freq(int itf, int channel)
 {
   if (itf == 0)
   {
-#if defined(MODE) && MODE == USE_2CH
+//#if defined(MODE) && MODE == USE_2CH
+//    if (channel == 0)
+//      return SIGNAL_FREQ_0_0;
+//    else if (channel == 2)
+//      return SIGNAL_FREQ_0_1;
+//    else if (channel == 1)
+//      return SIGNAL_FREQ_1_0;
+//    else
+//      return SIGNAL_FREQ_1_1;
+//#else
     if (channel == 0)
       return SIGNAL_FREQ_0_0;
-    else if (channel == 2)
-      return SIGNAL_FREQ_0_1;
-    else if (channel == 1)
-      return SIGNAL_FREQ_1_0;
-    else
-      return SIGNAL_FREQ_1_1;
-#else
-    if (channel == 0)
-      return SIGNAL_FREQ_0_0;
     else if (channel == 1)
       return SIGNAL_FREQ_0_1;
-#endif
+//#endif
   }
   else
     if (channel == 0)
@@ -83,7 +90,11 @@ static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
   {
     //printf("%x\n", (((int16_t *)buff)[i+16]));
 
+#if WORD_SIZE <= 16
     buff_complex[i].r = (float)(((int16_t *)buff)[i+16]);
+#else
+    buff_complex[i].r = (float)(((int32_t *)buff)[i+16]);
+#endif
     buff_complex[i].i = 0.0;
   }
 
@@ -133,9 +144,14 @@ static int test_entry()
     i2s_conf.block_size = BLOCK_SIZE;
     i2s_conf.frame_clk_freq = get_sampling_freq(i);
     i2s_conf.itf = i;
+#if defined(PDM) && PDM == 1
     i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_PDM;
     i2s_conf.pdm_decimation_log2 = 8;
-    i2s_conf.word_size = 16;
+#else
+    i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_I2S;
+#endif
+    i2s_conf.word_size = WORD_SIZE;
+    i2s_conf.channels = NB_CHANNELS;
 
     pi_open_from_conf(&i2s[i], &i2s_conf);
 
@@ -159,18 +175,50 @@ static int test_entry()
   }
 
 #if 0
+  printf("Raw buffer size\n");
+  for (int j=0; j<BLOCK_SIZE/ELEM_SIZE; j++)
+  {
+    if (WORD_SIZE <= 16)
+    {
+      short *buff0 = buff[0][0];
+      printf("%d\n", buff0[j]);
+    }
+    else
+    {
+      int *buff0 = buff[0][0];
+      printf("%p: %d %x\n", &buff0[j], buff0[j], buff0[j]);
+    }
+  }
+#endif
+
+  for (int i=0; i<NB_ITF; i++)
+  {
+    for (int k=0; k<NB_CHANNELS; k++)
+    {
+      for (int j=0; j<NB_ELEM; j++)
+      {
+        for (int l=0; l<ELEM_SIZE; l++)
+        {
+          ch_buff[i][k][j*ELEM_SIZE+l] = buff[i][0][(j*NB_CHANNELS + k)*ELEM_SIZE+l];
+        }
+      }
+    }
+  }
+
+#if 0
+  printf("Sorted buffer\n");
   for (int j=0; j<BUFF_SIZE/2; j++)
   {
-    short *buff0 = buff[0][1];
+    short *buff0 = ch_buff[0][0];
     printf("%d\n", buff0[j]);
   }
 #endif
 
   for (int i=0; i<NB_ITF; i++)
   {
-    for (int k=0; k<NB_CHANNEL; k++)
+    for (int k=0; k<NB_CHANNELS; k++)
     {
-      errors += check_buffer(buff[i][1], get_sampling_freq(i), get_signal_freq(i, k));
+      errors += check_buffer(ch_buff[i][k], get_sampling_freq(i), get_signal_freq(i, k));
     }
   }
 

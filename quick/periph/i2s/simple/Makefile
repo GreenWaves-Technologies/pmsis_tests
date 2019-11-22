@@ -24,21 +24,22 @@ SIGNAL_FREQ_1_1 ?= 2600
 
 PDM ?= 1
 NB_ITF ?= 1
-DUAL ?= 0
-MODE ?= USE_1CH
+NB_CHANNELS ?= 1
+WORD_SIZE ?= 16
+
+override runner_args += --config-opt=microphone0/width=$(WORD_SIZE)
+override runner_args += --config-opt=microphone1/width=$(WORD_SIZE)
 
 override runner_args += --config-opt=microphone0/stim_left=$(STIM_WAV_0_0)
 override runner_args += --config-opt=microphone0/stim_right=$(STIM_WAV_0_1)
 override runner_args += --config-opt=microphone1/stim_left=$(STIM_WAV_1_0)
 override runner_args += --config-opt=microphone1/stim_right=$(STIM_WAV_1_1)
+
 ifeq '$(PDM)' '1'
 override runner_args += --config-opt=microphone0/pdm=true
 override runner_args += --config-opt=microphone1/pdm=true
-else
-override runner_args += --config-opt=microphone0/pdm=false
-override runner_args += --config-opt=microphone1/pdm=false
-endif
-ifeq '$(DUAL)' '1'
+
+ifeq '$(NB_CHANNELS)' '2'
 override runner_args += --config-opt=microphone0/ddr=true
 override runner_args += --config-opt=microphone1/ddr=true
 else
@@ -46,7 +47,20 @@ override runner_args += --config-opt=microphone0/ddr=false
 override runner_args += --config-opt=microphone1/ddr=false
 endif
 
-override APP_CFLAGS += -O3 -g -DSAMPLING_FREQ_0=$(SAMPLING_FREQ_0) -DSAMPLING_FREQ_1=$(SAMPLING_FREQ_1) -DSIGNAL_FREQ_0_0=$(SIGNAL_FREQ_0_0) -DSIGNAL_FREQ_0_1=$(SIGNAL_FREQ_0_1) -DSIGNAL_FREQ_1_0=$(SIGNAL_FREQ_1_0) -DSIGNAL_FREQ_1_1=$(SIGNAL_FREQ_1_1) -DPDM=$(PDM) -DNB_ITF=$(NB_ITF) -DDUAL=$(DUAL) -DMODE=$(MODE)
+
+else
+override runner_args += --config-opt=microphone0/pdm=false
+override runner_args += --config-opt=microphone1/pdm=false
+ifeq '$(NB_CHANNELS)' '2'
+override runner_args += --config-opt=microphone0/dual=true
+override runner_args += --config-opt=microphone1/dual=true
+else
+override runner_args += --config-opt=microphone0/dual=false
+override runner_args += --config-opt=microphone1/dual=false
+endif
+endif
+
+override APP_CFLAGS += -O3 -g -DSAMPLING_FREQ_0=$(SAMPLING_FREQ_0) -DSAMPLING_FREQ_1=$(SAMPLING_FREQ_1) -DSIGNAL_FREQ_0_0=$(SIGNAL_FREQ_0_0) -DSIGNAL_FREQ_0_1=$(SIGNAL_FREQ_0_1) -DSIGNAL_FREQ_1_0=$(SIGNAL_FREQ_1_0) -DSIGNAL_FREQ_1_1=$(SIGNAL_FREQ_1_1) -DPDM=$(PDM) -DNB_ITF=$(NB_ITF) -DNB_CHANNELS=$(NB_CHANNELS) -DWORD_SIZE=$(WORD_SIZE)
 
 gen:
 	sox -n -r $(SAMPLING_FREQ_0) $(STIM_WAV_0_0) synth 3 sine $(SIGNAL_FREQ_0_0)
