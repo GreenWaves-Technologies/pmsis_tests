@@ -98,6 +98,8 @@ static int get_signal_freq(int itf, int channel)
       return SIGNAL_FREQ_1_0;
     else
       return SIGNAL_FREQ_1_1;
+
+  return SIGNAL_FREQ_0_0;
 }
 
 static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
@@ -189,7 +191,7 @@ static int test_entry()
   void *chunk[NB_ITF];
   for (int i=0; i<NB_ITF; i++)
   {
-    int size;
+    unsigned int size;
 
     pi_i2s_read(&i2s[i], &chunk[i], &size);
     pi_i2s_ioctl(&i2s[i], PI_I2S_IOCTL_STOP, NULL);
