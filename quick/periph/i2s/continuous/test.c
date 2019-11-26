@@ -208,7 +208,7 @@ static int test_entry()
 {
   int errors = 0;
 
-  printf("Entering test (pdm: %d, nb_itf: %d, nb_channels: %d, word_size: %d, nb_elem: %d, nb_capture: %d)\n", PDM, NB_ITF, NB_CHANNELS, WORD_SIZE, NB_ELEM_PER_CHANNEL, NB_CAPTURE);
+  printf("Entering test (mixed: %d, pdm: %d, nb_itf: %d, nb_channels: %d, word_size: %d, nb_elem: %d, nb_capture: %d, periph_freq: %d)\n", MIXED, PDM, NB_ITF, NB_CHANNELS, WORD_SIZE, NB_ELEM_PER_CHANNEL, NB_CAPTURE, PERIPH_FREQ);
 
   pi_pad_set_function(PI_PAD_37_B14_I2S1_SDI, PI_PAD_37_B14_I2S1_SDI_FUNC0);
   pi_pad_set_function(PI_PAD_36_A15_I2S1_WS, PI_PAD_36_A15_I2S1_WS_FUNC0);
@@ -216,6 +216,11 @@ static int test_entry()
   pi_pad_set_function(PI_PAD_55_A24_I2S0_SCK, PI_PAD_55_A24_I2S0_SCK_FUNC0);
   pi_pad_set_function(PI_PAD_56_A26_I2S0_WS, PI_PAD_56_A26_I2S0_WS_FUNC0);
   pi_pad_set_function(PI_PAD_57_B23_I2S0_SDI, PI_PAD_57_B23_I2S0_SDI_FUNC0);
+
+  if (PERIPH_FREQ != 0)
+  {
+    pi_freq_set(PI_FREQ_DOMAIN_PERIPH, PERIPH_FREQ);
+  }
 
 
   for (int i=0; i<NB_ITF; i++)
@@ -228,12 +233,30 @@ static int test_entry()
     i2s_conf.block_size = BUFF_SIZE;
     i2s_conf.frame_clk_freq = get_sampling_freq(i);
     i2s_conf.itf = i;
-#if defined(PDM) && PDM == 1
+
+#if defined(MIXED) && MIXED == 1
+
+    if (i == 0)
+    {
+      i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_PDM;
+      i2s_conf.pdm_decimation_log2 = 8;
+    }
+    else
+    {
+      i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_I2S;
+    }
+
+#elif defined(PDM) && PDM == 1
+
     i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_PDM;
     i2s_conf.pdm_decimation_log2 = 8;
+
 #else
+
     i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_I2S;
+
 #endif
+
     i2s_conf.word_size = WORD_SIZE;
     i2s_conf.channels = NB_CHANNELS;
 
