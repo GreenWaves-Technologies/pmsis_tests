@@ -231,6 +231,8 @@ static int test_entry()
 
   printf("Entering test (pdm: %d, nb_itf: %d, nb_channels: %d, word_size: %d, nb_elem: %d, nb_capture: %d, nb_start_stop: %d)\n", PDM, NB_ITF, NB_CHANNELS, WORD_SIZE, NB_ELEM_PER_CHANNEL, NB_CAPTURE, NB_START_STOP);
 
+  pi_bsp_init();
+
   pi_pad_set_function(PI_PAD_37_B14_I2S1_SDI, PI_PAD_37_B14_I2S1_SDI_FUNC0);
   pi_pad_set_function(PI_PAD_36_A15_I2S1_WS, PI_PAD_36_A15_I2S1_WS_FUNC0);
   pi_pad_set_function(PI_PAD_35_B13_I2S1_SCK, PI_PAD_35_B13_I2S1_SCK_FUNC0);
@@ -251,7 +253,7 @@ static int test_entry()
     i2s_conf.itf = i;
 #if defined(PDM) && PDM == 1
     i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_PDM;
-    i2s_conf.pdm_decimation_log2 = 8;
+    i2s_conf.pdm_decimation = 64;
 #else
     i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_I2S;
 #endif

@@ -149,6 +149,8 @@ static int test_entry()
 
   printf("Entering main controller\n");
 
+  pi_bsp_init();
+
   pi_pad_set_function(PI_PAD_37_B14_I2S1_SDI, PI_PAD_37_B14_I2S1_SDI_FUNC0);
   pi_pad_set_function(PI_PAD_36_A15_I2S1_WS, PI_PAD_36_A15_I2S1_WS_FUNC0);
   pi_pad_set_function(PI_PAD_35_B13_I2S1_SCK, PI_PAD_35_B13_I2S1_SCK_FUNC0);
@@ -169,7 +171,7 @@ static int test_entry()
     i2s_conf.itf = i;
 #if defined(PDM) && PDM == 1
     i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_PDM;
-    i2s_conf.pdm_decimation_log2 = 8;
+    i2s_conf.pdm_decimation = 64;
 #else
     i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_I2S;
 #endif
@@ -194,6 +196,10 @@ static int test_entry()
     unsigned int size;
 
     pi_i2s_read(&i2s[i], &chunk[i], &size);
+  }
+
+  for (int i=0; i<NB_ITF; i++)
+  {
     pi_i2s_ioctl(&i2s[i], PI_I2S_IOCTL_STOP, NULL);
     pi_i2s_close(&i2s[i]);
   }
@@ -204,12 +210,12 @@ static int test_entry()
   {
     if (WORD_SIZE <= 16)
     {
-      short *buff0 = buff[0][0];
+      short *buff0 = buff[1][0];
       printf("%p: %d %x\n", &buff0[j], buff0[j], buff0[j]);
     }
     else
     {
-      int *buff0 = buff[0][0];
+      int *buff0 = buff[1][0];
       printf("%p: %d %x\n", &buff0[j], buff0[j], buff0[j]);
     }
   }
