@@ -25,10 +25,10 @@ static pi_task_t buf_event[NB_BUFFERS];
 
 static inline void get_info(int *buffer_size)
 {
-#if !defined(ARCHI_PLATFORM_RTL)
+#if !defined( PI_PLATFORM_RTL)
   *buffer_size = TOTAL_SIZE;
 #else
-  if (rt_platform() == ARCHI_PLATFORM_RTL)
+  if (pi_platform() == PI_PLATFORM_RTL)
   {
     *buffer_size = TOTAL_SIZE_RTL;
   }

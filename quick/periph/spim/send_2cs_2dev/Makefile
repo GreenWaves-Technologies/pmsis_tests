@@ -1,5 +1,7 @@
 -include $(RULES_DIR)/properties.mk
 
+CONFIG_SPIM=1
+
 RUNNER_CONFIG = $(CURDIR)/config-$(TARGET_NAME).ini
 
 ifeq (,$(wildcard $(RUNNER_CONFIG)))

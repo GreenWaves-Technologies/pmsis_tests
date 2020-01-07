@@ -1,5 +1,7 @@
 -include $(RULES_DIR)/properties.mk
 
+CONFIG_SPIM=1
+
 RUNNER_CONFIG = $(CURDIR)/config-$(TARGET_NAME).ini
 
 ifeq (,$(wildcard $(RUNNER_CONFIG)))
@@ -23,6 +25,6 @@ endif
 
 APP = test
 APP_SRCS += test.c
-APP_CFLAGS += -O3 -g
+APP_CFLAGS += -Os -g
 
 include $(RULES_DIR)/pmsis_rules.mk
