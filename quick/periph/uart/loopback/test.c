@@ -8,13 +8,13 @@ PI_L2 uint8_t tx_buffer[BUFFER_SIZE];
 
 PI_L2 uint8_t rx_buffer[BUFFER_SIZE];
 
+struct pi_uart_conf conf;
+struct pi_device uart;
 
-int main()
+
+static int test()
 {
   printf("Entered test\n");
-
-  struct pi_uart_conf conf;
-  struct pi_device uart;
 
   pi_uart_conf_init(&conf);
 
@@ -68,4 +68,15 @@ int main()
   }
 
   return error;
+}
+
+static void test_entry()
+{
+  int status = test();
+  pmsis_exit(status);
+}
+
+int main(void)
+{
+    return pmsis_kickoff((void *)test_entry);
 }
