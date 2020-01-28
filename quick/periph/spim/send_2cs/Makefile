@@ -8,6 +8,10 @@ ifeq (,$(wildcard $(RUNNER_CONFIG)))
 RUNNER_CONFIG = $(CURDIR)/config.ini
 endif
 
+ifeq '$(TARGET_NAME)' 'gap9_v2'
+APP_CFLAGS += -DSPIM_ITF=0
+APP_CFLAGS += -DSPIM_CS=0
+else
 ifeq '$(TARGET_NAME)' 'wolfe'
 APP_CFLAGS += -DSPIM_ITF=0
 else
@@ -24,6 +28,7 @@ ifeq '$(TARGET_NAME)' 'vivosoc3'
 APP_CFLAGS += -DSPIM_ITF=1
 else
 APP_CFLAGS += -DSPIM_ITF=1
+endif
 endif
 endif
 endif
