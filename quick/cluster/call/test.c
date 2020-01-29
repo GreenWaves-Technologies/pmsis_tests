@@ -10,10 +10,6 @@
 
 #include "pmsis.h"
 #include "stdio.h"
-#include "pmsis/cluster/cluster_sync/fc_to_cl_delegate.h"
-#include "pmsis/task.h"
-#include "pmsis/device.h"
-#include "pmsis/rtos/pmsis_os.h"
 
 #define NB_CALL 1024
 #define NB_TASKS 32
