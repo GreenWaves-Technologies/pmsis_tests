@@ -11,7 +11,7 @@ endif
 APP_CFLAGS = $(TEST_CFLAGS)
 
 ifeq '$(TARGET_NAME)' 'gap9_v2'
-APP_CFLAGS += -DSPIM_ITF=0
+APP_CFLAGS += -DSPIM_ITF=2
 APP_CFLAGS += -DSPIM_CS=0
 else
 ifeq '$(TARGET_NAME)' 'vega'
