@@ -37,7 +37,7 @@
 #error Unsupported word size
 #endif
 #define NB_ELEM 256
-#define BUFF_SIZE ((NB_ELEM+16)*ELEM_SIZE)
+#define BUFF_SIZE ((NB_ELEM)*ELEM_SIZE)
 #define BLOCK_SIZE (NB_ELEM*ELEM_SIZE)
 
 static uint8_t buff[NB_ITF][2][BUFF_SIZE*NB_CHANNELS];
@@ -109,7 +109,7 @@ static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
     //printf("%x\n", (((int16_t *)buff)[i+16]));
 
 #if WORD_SIZE <= 16
-    buff_complex[i].r = (float)(((int16_t *)buff)[i+16]);
+    buff_complex[i].r = (float)(((int16_t *)buff)[i]);
 #else
     buff_complex[i].r = (float)(((int32_t *)buff)[i+16]);
 #endif

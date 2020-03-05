@@ -37,9 +37,10 @@
 #error Unsupported word size
 #endif
 
-#define NB_ELEM (NB_ELEM_PER_CHANNEL*NB_CHANNELS)
+#define NB_ELEM (NB_ELEM_PER_CHANNEL)
+#define NB_ELEM_TOTAL (NB_ELEM_PER_CHANNEL*NB_CHANNELS)
 
-#define BUFF_SIZE (NB_ELEM*ELEM_SIZE)
+#define BUFF_SIZE (NB_ELEM_TOTAL*ELEM_SIZE)
 
 #define CAPTURE_SIZE (BUFF_SIZE*NB_CAPTURE)
 
@@ -193,6 +194,8 @@ static void handle_read(void *arg)
         elem_value = (elem_value << 16) >> 16;
       }
 
+      //printf("(%d, %d, %d) %lx %p\n", itf_id, k, j, *(short *)&ch_buff[itf_id][k][nb_captured_elem[itf_id]*ELEM_SIZE + j*ELEM_SIZE], &ch_buff[itf_id][k][nb_captured_elem[itf_id]*ELEM_SIZE + j*ELEM_SIZE]);
+
       if (elem_value > max[itf_id][k])
         max[itf_id][k] = elem_value;
       if (elem_value < min[itf_id][k])
@@ -201,7 +204,7 @@ static void handle_read(void *arg)
 
   }
 
-  nb_captured_elem[itf_id] += NB_ELEM;
+  nb_captured_elem[itf_id] += NB_ELEM_TOTAL;
 }
 
 static int test_entry()
@@ -309,10 +312,6 @@ static int test_entry()
   {
     pi_i2s_ioctl(&i2s[i], PI_I2S_IOCTL_STOP, NULL);
     pi_i2s_close(&i2s[i]);
-    for (int j=0; j<NB_CHANNELS; j++)
-    {
-      pi_l2_free(ch_buff[i][j], CAPTURE_SIZE);
-    }
   }
 
   cfg = kiss_fft_alloc(NB_ELEM, 0, NULL, NULL);
@@ -352,6 +351,34 @@ static int test_entry()
 
         errors += check_buffer(buff, get_sampling_freq(i), get_signal_freq(i, k));
       }
+    }
+  }
+
+#if 0
+  for (int i=0; i<NB_ITF; i++)
+  {
+    for (int k=0; k<NB_CHANNELS; k++)
+    {
+      for (int l=0; l<NB_CAPTURE; l++)
+      {
+        char *buff = &ch_buff[i][k][l*BUFF_SIZE];
+
+        printf("Raw buffer size\n");
+        for (int j=0; j<BUFF_SIZE/ELEM_SIZE/NB_CHANNELS; j++)
+        {
+            short *buff0 = buff;
+            printf("%p: %d %x\n", &buff0[j], buff0[j], buff0[j]);
+        }
+      }
+    }
+  }
+#endif
+
+  for (int i=0; i<NB_ITF; i++)
+  {
+    for (int j=0; j<NB_CHANNELS; j++)
+    {
+      pi_l2_free(ch_buff[i][j], CAPTURE_SIZE);
     }
   }
 
