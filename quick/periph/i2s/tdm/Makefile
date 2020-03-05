@@ -1,6 +1,5 @@
 APP = test
-APP_SRCS = test.c 
-#kiss_fft.c
+APP_SRCS = test.c kiss_fft.c
 APP_CFLAGS = -O3 -g
 APP_LDFLAGS = -lm -lgcc
 
