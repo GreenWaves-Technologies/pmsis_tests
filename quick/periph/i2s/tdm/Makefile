@@ -5,7 +5,7 @@ APP_LDFLAGS = -lm -lgcc
 
 CONFIG_I2S = 1
 
-override config_args += --ini-config=$(CURDIR)/config.ini
+RUNNER_CONFIG = $(CURDIR)/config.ini
 
 ifdef GAP_SDK_HOME
 CONFIG_BUILD_DIR = $(BUILDDIR)
