@@ -30,36 +30,36 @@ NB_ELEM ?= 256
 NB_CAPTURE ?= 16
 NB_START_STOP ?= 4
 
-override runner_args += --config-opt=microphone0/width=$(WORD_SIZE)
-override runner_args += --config-opt=microphone1/width=$(WORD_SIZE)
+override config_args += --config-opt=microphone0/width=$(WORD_SIZE)
+override config_args += --config-opt=microphone1/width=$(WORD_SIZE)
 
-override runner_args += --config-opt=microphone0/stim_left=$(STIM_WAV_0_0)
-override runner_args += --config-opt=microphone0/stim_right=$(STIM_WAV_0_1)
-override runner_args += --config-opt=microphone1/stim_left=$(STIM_WAV_1_0)
-override runner_args += --config-opt=microphone1/stim_right=$(STIM_WAV_1_1)
+override config_args += --config-opt=microphone0/stim_left=$(STIM_WAV_0_0)
+override config_args += --config-opt=microphone0/stim_right=$(STIM_WAV_0_1)
+override config_args += --config-opt=microphone1/stim_left=$(STIM_WAV_1_0)
+override config_args += --config-opt=microphone1/stim_right=$(STIM_WAV_1_1)
 
 ifeq '$(PDM)' '1'
-override runner_args += --config-opt=microphone0/pdm=true
-override runner_args += --config-opt=microphone1/pdm=true
+override config_args += --config-opt=microphone0/pdm=true
+override config_args += --config-opt=microphone1/pdm=true
 
 ifeq '$(NB_CHANNELS)' '2'
-override runner_args += --config-opt=microphone0/ddr=true
-override runner_args += --config-opt=microphone1/ddr=true
+override config_args += --config-opt=microphone0/ddr=true
+override config_args += --config-opt=microphone1/ddr=true
 else
-override runner_args += --config-opt=microphone0/ddr=false
-override runner_args += --config-opt=microphone1/ddr=false
+override config_args += --config-opt=microphone0/ddr=false
+override config_args += --config-opt=microphone1/ddr=false
 endif
 
 
 else
-override runner_args += --config-opt=microphone0/pdm=false
-override runner_args += --config-opt=microphone1/pdm=false
+override config_args += --config-opt=microphone0/pdm=false
+override config_args += --config-opt=microphone1/pdm=false
 ifeq '$(NB_CHANNELS)' '2'
-override runner_args += --config-opt=microphone0/dual=true
-override runner_args += --config-opt=microphone1/dual=true
+override config_args += --config-opt=microphone0/dual=true
+override config_args += --config-opt=microphone1/dual=true
 else
-override runner_args += --config-opt=microphone0/dual=false
-override runner_args += --config-opt=microphone1/dual=false
+override config_args += --config-opt=microphone0/dual=false
+override config_args += --config-opt=microphone1/dual=false
 endif
 endif
 
