@@ -247,6 +247,8 @@ static int test_entry()
           elem_value = (elem_value << 16) >> 16;
         }
 
+        //printf("VAL %x %d\n", (unsigned short)elem_value, elem_value);
+
         if (elem_value > max[i][k])
           max[i][k] = elem_value;
         if (elem_value < min[i][k])

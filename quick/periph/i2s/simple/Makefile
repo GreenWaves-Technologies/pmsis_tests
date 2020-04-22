@@ -3,11 +3,15 @@ APP_SRCS = test.c kiss_fft.c
 APP_CFLAGS = -O3 -g
 APP_LDFLAGS = -lm -lgcc
 
+CONFIG_I2S = 1
+
 ifdef GAP_SDK_HOME
 CONFIG_BUILD_DIR = $(BUILDDIR)
 endif
 
+ifeq '$(TARGET_CHIP_FAMILY)' 'GAP8'
 RUNNER_CONFIG = $(CURDIR)/config.ini
+endif
 
 STIM_WAV_0_0 ?= $(CONFIG_BUILD_DIR)/stim_0_0.wav
 STIM_WAV_0_1 ?= $(CONFIG_BUILD_DIR)/stim_0_1.wav
@@ -27,6 +31,8 @@ NB_ITF ?= 1
 NB_CHANNELS ?= 1
 WORD_SIZE ?= 16
 
+override config_args += --config-opt=**/runner/gvsoc_dpi/enabled=true
+
 override config_args += --config-opt=microphone0/width=$(WORD_SIZE)
 override config_args += --config-opt=microphone1/width=$(WORD_SIZE)
 
@@ -34,6 +40,9 @@ override config_args += --config-opt=microphone0/stim_left=$(STIM_WAV_0_0)
 override config_args += --config-opt=microphone0/stim_right=$(STIM_WAV_0_1)
 override config_args += --config-opt=microphone1/stim_left=$(STIM_WAV_1_0)
 override config_args += --config-opt=microphone1/stim_right=$(STIM_WAV_1_1)
+
+override config_args += --config-opt=board/components/mic0/mic/stim=$(STIM_WAV_0_0)
+#override config_args += --config-opt=board/components/mic0/mic/stim_mode=incr
 
 ifeq '$(PDM)' '1'
 override config_args += --config-opt=microphone0/pdm=true
