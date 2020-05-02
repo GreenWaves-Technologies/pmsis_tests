@@ -16,17 +16,10 @@
  */
 
 #include "pmsis.h"
+#ifdef USE_FFT
 #include "kiss_fft.h"
-
-
-
-#ifndef NB_ITF
-#define NB_ITF 1
 #endif
 
-#ifndef NB_CHANNELS
-#define NB_CHANNELS 1
-#endif
 
 #define ERROR_RATE 20
 #if WORD_SIZE == 32
@@ -36,7 +29,7 @@
 #else
 #error Unsupported word size
 #endif
-#define NB_ELEM 256
+
 #define BUFF_SIZE ((NB_ELEM)*ELEM_SIZE)
 #define BLOCK_SIZE (NB_ELEM*ELEM_SIZE)
 
@@ -48,9 +41,11 @@ static int min[NB_ITF][NB_CHANNELS];
 
 
 
+#ifdef USE_FFT
 static kiss_fft_cpx buff_complex[NB_ELEM];
 static kiss_fft_cpx buff_complex_out[NB_ELEM];
 static kiss_fft_cfg cfg;
+#endif
 
 static int get_sampling_freq(int itf)
 {
@@ -72,6 +67,22 @@ static int check_error(int bound, int value, float error_margin)
   return error > error_margin;
 }
 
+#ifndef USE_FFT
+static int get_incr_start(int start_value, int itf, int channel, int *error)
+{
+  if (((start_value - INCR_START0_0) % INCR_VALUE0_0) != 0)
+  {
+    *error = 1;
+    return 0;
+  }
+  return start_value;
+}
+
+static int get_incr_next(uint32_t value, int itf, int channel)
+{
+  return value + INCR_VALUE0_0;
+}
+#endif
 
 static int get_signal_freq(int itf, int channel)
 {
@@ -104,6 +115,7 @@ static int get_signal_freq(int itf, int channel)
 
 static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
 {
+#ifdef USE_FFT
   for (int i=0; i<NB_ELEM; i++)
   {
     //printf("%x\n", (((int16_t *)buff)[i+16]));
@@ -141,6 +153,33 @@ static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
   printf("    Got error rate %d %% (expected: %d, got %d)\n", (int)error, (int)signal_freq, (int)freq);
 
   return error > ERROR_RATE;
+#else
+
+  int16_t *check_buff = (int16_t *)buff;
+  int error = 0;
+  int16_t expected = get_incr_start(check_buff[0], 0, 0, &error);  
+  if (error)
+  {
+    printf("Could not find initial value from buffer\n");
+    return -1;
+  }
+
+  for (int i=0; i<NB_ELEM; i++)
+  {
+    //printf("%x %x\n", check_buff[i], expected);
+
+    if (expected != check_buff[i])
+    {
+      printf("Error at index %d, expected %x, got %x\n", i, expected, check_buff[i]);
+      return -1;
+    }
+
+    expected = get_incr_next(expected, 0, 0);
+  }
+
+  return 0;
+
+#endif
 }
 
 static int test_entry()
@@ -221,7 +260,9 @@ static int test_entry()
   }
 #endif
 
+#ifdef USE_FFT
   cfg = kiss_fft_alloc(NB_ELEM, 0, NULL, NULL);
+#endif
 
   for (int i=0; i<NB_ITF; i++)
   {
