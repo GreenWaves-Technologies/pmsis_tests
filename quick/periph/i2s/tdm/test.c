@@ -17,7 +17,9 @@
 
 #include "bsp/bsp.h"
 #include "pmsis.h"
+#ifdef USE_FFT
 #include "kiss_fft.h"
+#endif
 
 
 
@@ -37,21 +39,56 @@
 #else
 #error Unsupported word size
 #endif
-#define NB_ELEM 256
 #define BUFF_SIZE  (NB_ELEM*ELEM_SIZE)
 #define BLOCK_SIZE (NB_ELEM*ELEM_SIZE)
 
 static uint8_t *buff[NB_ITF][2];
+static uint8_t *tx_buff[NB_ITF][2];
 static uint8_t *ch_buff[NB_ITF][NB_CHANNELS];
+static uint8_t *ch_tx_buff[NB_ITF][NB_CHANNELS];
 static struct pi_device i2s[NB_ITF];
 static int max[NB_ITF][NB_CHANNELS];
 static int min[NB_ITF][NB_CHANNELS];
 
+static pi_task_t tasks[NB_ITF][NB_CHANNELS];
 
 
+
+#ifdef USE_FFT
 static kiss_fft_cpx buff_complex[NB_ELEM];
 static kiss_fft_cpx buff_complex_out[NB_ELEM];
 static kiss_fft_cfg cfg;
+#endif
+
+
+#ifdef TX_ENABLED
+
+static int tx_buffer_current_val[NB_ITF][NB_CHANNELS];
+static int tx_buffer_current_index[NB_ITF][NB_CHANNELS];
+
+static int get_write_buffer_start(int itf, int channel)
+{
+  return TX_BUFFER_START0_0;
+}
+
+static int get_write_buffer_next(int value, int itf, int channel)
+{
+  return value + TX_BUFFER_NEXT0_0;
+}
+
+void fill_tx_buffer(int i, int j)
+{
+  int16_t *short_buff = (int16_t *)tx_buff[i][tx_buffer_current_index[i][j]];
+  tx_buffer_current_index[i][j] ^= 1;
+  for (int k=0; k<BUFF_SIZE/2; k++)
+  {
+    short_buff[j*BUFF_SIZE + k] = tx_buffer_current_val[i][j];
+    tx_buffer_current_val[i][j] = get_write_buffer_next(tx_buffer_current_val[i][j], i, j);
+  }
+}
+
+#endif
+
 
 static int get_sampling_freq(int itf)
 {
@@ -104,6 +141,7 @@ static int get_signal_freq(int itf, int channel)
 
 static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
 {
+#ifdef USE_FFT
   for (int i=0; i<NB_ELEM; i++)
   {
     //printf("%x\n", (((int16_t *)buff)[i+16]));
@@ -141,6 +179,9 @@ static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
   printf("    Got error rate %d %% (expected: %d, got %d)\n", (int)error, (int)signal_freq, (int)freq);
 
   return error > ERROR_RATE;
+#else
+  return 0;
+#endif
 }
 
 static int test_entry()
@@ -164,9 +205,15 @@ static int test_entry()
     buff[i][0] = pi_l2_malloc(BUFF_SIZE*NB_CHANNELS);
     buff[i][1] = pi_l2_malloc(BUFF_SIZE*NB_CHANNELS);
 
+    tx_buff[i][0] = pi_l2_malloc(BUFF_SIZE*NB_CHANNELS);
+    tx_buff[i][1] = pi_l2_malloc(BUFF_SIZE*NB_CHANNELS);
+
     for (int j=0; j<NB_CHANNELS; j++)
     {
       ch_buff[i][j] = pi_l2_malloc(BUFF_SIZE);
+#ifdef TX_ENABLED
+      ch_tx_buff[i][j] = pi_l2_malloc(BUFF_SIZE);
+#endif
     }
   }
 
@@ -177,6 +224,11 @@ static int test_entry()
     struct pi_i2s_conf i2s_conf;
     pi_i2s_conf_init(&i2s_conf);
 
+//#if (defined(RX_ENABLED) && defined(TX_ENABLED)) || defined (LOOPBACK_ENABLED)
+    i2s_conf.options = PI_I2S_OPT_FULL_DUPLEX;
+//#else
+    //i2s_conf.options = 0;
+//#endif
     i2s_conf.pingpong_buffers[0] = buff[i][0];
     i2s_conf.pingpong_buffers[1] = buff[i][1];
     i2s_conf.block_size = BLOCK_SIZE;
@@ -191,7 +243,7 @@ static int test_entry()
     i2s_conf.word_size = WORD_SIZE;
     i2s_conf.channels = NB_CHANNELS;
 #if defined(TDM) && TDM == 1
-    i2s_conf.options = PI_I2S_OPT_TDM;
+    i2s_conf.options |= PI_I2S_OPT_TDM;
 #endif
 
     pi_open_from_conf(&i2s[i], &i2s_conf);
@@ -200,19 +252,37 @@ static int test_entry()
       return -1;
       
 #if defined(TDM) && TDM == 1
-    struct pi_i2s_ch_conf i2s_ch_conf;
-    i2s_ch_conf.id = 0;
-    pi_i2s_ioctl(&i2s[i], PI_I2S_IOCTL_CH_CONF_GET, &i2s_ch_conf);
-    i2s_ch_conf.options = PI_I2S_CH_OPT_PINGPONG;
-    i2s_ch_conf.block_size = BLOCK_SIZE;
+#ifdef RX_ENABLED
+    i2s_conf.options = PI_I2S_OPT_PINGPONG | PI_I2S_OPT_ENABLED;
+    i2s_conf.block_size = BLOCK_SIZE;
+    i2s_conf.word_size = WORD_SIZE;
+#endif
+#ifdef TX_ENABLED
+    i2s_conf.options = PI_I2S_OPT_PINGPONG | PI_I2S_OPT_IS_TX | PI_I2S_OPT_ENABLED;
+    i2s_conf.block_size = BLOCK_SIZE;
+    i2s_conf.word_size = WORD_SIZE;
+#endif
+#ifdef LOOPBACK_ENABLED
+    i2s_conf.tx_options |= PI_I2S_OPT_LOOPBACK;
+#endif
 
     for (int j=0; j<NB_CHANNELS; j++)
     {
-      i2s_ch_conf.id = j;
-      i2s_ch_conf.enabled = 1;
-      i2s_ch_conf.pingpong_buffers[0] = &buff[i][0][j*BUFF_SIZE];
-      i2s_ch_conf.pingpong_buffers[1] = &buff[i][1][j*BUFF_SIZE];
-      pi_i2s_ioctl(&i2s[i], PI_I2S_IOCTL_CH_CONF_SET, &i2s_ch_conf);
+      i2s_conf.channel_id = j;
+#ifdef RX_ENABLED
+      i2s_conf.pingpong_buffers[0] = &buff[i][0][j*BUFF_SIZE];
+      i2s_conf.pingpong_buffers[1] = &buff[i][1][j*BUFF_SIZE];
+#endif
+#ifdef TX_ENABLED
+
+      tx_buffer_current_val[i][j] = get_write_buffer_start(i, j);
+      tx_buffer_current_index[i][j] = 0;
+      fill_tx_buffer(i, j);
+
+      i2s_conf.pingpong_buffers[0] = &tx_buff[i][0][j*BUFF_SIZE];
+      i2s_conf.pingpong_buffers[1] = &tx_buff[i][1][j*BUFF_SIZE];
+#endif
+      pi_i2s_ioctl(&i2s[i], PI_I2S_IOCTL_CONF_SET, &i2s_conf);
     }
 
 #endif
@@ -233,9 +303,29 @@ static int test_entry()
 
     for (int j=0; j<NB_CHANNELS; j++)
     {
+#ifdef TX_ENABLED
+      pi_i2s_channel_write_async(&i2s[i], j, NULL, size, pi_task_block(&tasks[i][j]));
+#endif
+#ifdef RX_ENABLED
       pi_i2s_channel_read(&i2s[i], j, &chunk[i][j], &size);
+#endif
     }
   }
+
+  for (int i=0; i<NB_ITF; i++)
+  {
+    unsigned int size;
+
+    for (int j=0; j<NB_CHANNELS; j++)
+    {
+#ifdef TX_ENABLED
+      pi_task_wait_on(&tasks[i][j]);
+#endif
+    }
+  }
+
+
+
 #else
   void *chunk[NB_ITF];
   for (int i=0; i<NB_ITF; i++)
@@ -246,6 +336,14 @@ static int test_entry()
     pi_i2s_read(&i2s[i], &chunk[i], &size);
   }
 #endif
+
+
+#ifdef TX_ENABLED
+  // FIXME
+  // There is no HW support to know when the pending samples are flushed, so just wait a bit for now
+  for (volatile int i=0; i<1000; i++);
+#endif
+
 
   for (int i=0; i<NB_ITF; i++)
   {
@@ -290,7 +388,12 @@ static int test_entry()
 #endif
 #endif
 
+
+#ifdef RX_ENABLED
+
+#ifdef USE_FFT
   cfg = kiss_fft_alloc(NB_ELEM, 0, NULL, NULL);
+#endif
 
   for (int i=0; i<NB_ITF; i++)
   {
@@ -347,6 +450,7 @@ static int test_entry()
       errors += check_buffer(&buff[i][0][k*BUFF_SIZE], get_sampling_freq(i), get_signal_freq(i, k));
     }
   }
+#endif
 
   if (errors)
     printf("TEST FAILURE\n");

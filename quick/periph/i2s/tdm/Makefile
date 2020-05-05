@@ -5,7 +5,7 @@ APP_LDFLAGS = -lm -lgcc
 
 CONFIG_I2S = 1
 
-RUNNER_CONFIG = $(CURDIR)/config.ini
+#RUNNER_CONFIG = $(CURDIR)/config.ini
 
 ifdef GAP_SDK_HOME
 CONFIG_BUILD_DIR = $(BUILDDIR)
@@ -18,6 +18,9 @@ STIM_WAV_0_1 ?= $(CONFIG_BUILD_DIR)/stim_0_1.wav
 STIM_WAV_0_2 ?= $(CONFIG_BUILD_DIR)/stim_0_2.wav
 STIM_WAV_0_3 ?= $(CONFIG_BUILD_DIR)/stim_0_3.wav
 
+TX_ENABLED ?= 1
+RX_ENABLED ?= 1
+LOOPBACK_ENABLED ?= 0
 
 SAMPLING_FREQ_0 ?= 44100
 SAMPLING_FREQ_1 ?= 44100
@@ -32,24 +35,52 @@ NB_ITF ?= 1
 NB_CHANNELS ?= 1
 WORD_SIZE ?= 16
 TDM ?= 0
+NB_ELEM ?= 256
 
-override config_args += --config-item=microphone0/width=$(WORD_SIZE)
+ifeq '$(TX_ENABLED)' '1'
+incr = $(shell echo $$((((1<<$(WORD_SIZE)) / $(NB_ELEM)) * 7 + 13)))
+start = 0
+APP_CFLAGS += -DTX_ENABLED -DTX_BUFFER_START0_0=$(start) -DTX_BUFFER_NEXT0_0=$(incr)
+endif
 
-override config_args += --config-item=microphone0/stim_0=$(STIM_WAV_0_0)
-override config_args += --config-item=microphone0/stim_1=$(STIM_WAV_0_1)
-override config_args += --config-item=microphone0/stim_2=$(STIM_WAV_0_2)
-override config_args += --config-item=microphone0/stim_3=$(STIM_WAV_0_3)
+ifeq '$(RX_ENABLED)' '1'
+APP_CFLAGS += -DRX_ENABLED
+endif
+
+ifeq '$(LOOPBACK_ENABLED)' '1'
+APP_CFLAGS += -DLOOPBACK_ENABLED
+endif
+
+
+override config_args += --config-opt=**/runner/gvsoc_dpi/enabled=true
+
+
+override config_args += --config-opt=microphone0/width=$(WORD_SIZE)
+
+override config_args += --config-opt=microphone0/stim_0=$(STIM_WAV_0_0)
+override config_args += --config-opt=microphone0/stim_1=$(STIM_WAV_0_1)
+override config_args += --config-opt=microphone0/stim_2=$(STIM_WAV_0_2)
+override config_args += --config-opt=microphone0/stim_3=$(STIM_WAV_0_3)
+
+override config_args += --config-opt=board/components/mic0/mic/stim=$(STIM_WAV_0_0)
+override config_args += --config-opt=board/components/sink0/sink/outfile=outfile.hex
 
 
 override APP_CFLAGS += -O3 -g -DSAMPLING_FREQ_0=$(SAMPLING_FREQ_0) -DSAMPLING_FREQ_1=$(SAMPLING_FREQ_1) \
 	-DSIGNAL_FREQ_0_0=$(SIGNAL_FREQ_0_0) -DSIGNAL_FREQ_0_1=$(SIGNAL_FREQ_0_1) -DSIGNAL_FREQ_0_2=$(SIGNAL_FREQ_0_2) \
 	-DSIGNAL_FREQ_0_3=$(SIGNAL_FREQ_0_3) -DPDM=$(PDM) -DNB_ITF=$(NB_ITF) -DNB_CHANNELS=$(NB_CHANNELS) \
-	-DWORD_SIZE=$(WORD_SIZE) -DTDM=$(TDM)
+	-DWORD_SIZE=$(WORD_SIZE) -DTDM=$(TDM) -DNB_ELEM=$(NB_ELEM)
 
 gen:
 	sox -n -r $(SAMPLING_FREQ_0) --bits $(WORD_SIZE) $(STIM_WAV_0_0) synth 3 sine $(SIGNAL_FREQ_0_0) vol 0.995
 	sox -n -r $(SAMPLING_FREQ_0) --bits $(WORD_SIZE) $(STIM_WAV_0_1) synth 3 sine $(SIGNAL_FREQ_0_1) vol 0.995
 	sox -n -r $(SAMPLING_FREQ_0) --bits $(WORD_SIZE) $(STIM_WAV_0_2) synth 3 sine $(SIGNAL_FREQ_0_2) vol 0.995
 	sox -n -r $(SAMPLING_FREQ_0) --bits $(WORD_SIZE) $(STIM_WAV_0_3) synth 3 sine $(SIGNAL_FREQ_0_3) vol 0.995
+
+check:
+ifeq '$(TX_ENABLED)' '1'
+	./check_tx_buffer.py --file $(BUILDDIR)/outfile.hex --start=$(start) --incr=$(incr) --width=$(WORD_SIZE) --nb-elem=$(NB_ELEM)
+endif
+
 
 include $(RULES_DIR)/pmsis_rules.mk
