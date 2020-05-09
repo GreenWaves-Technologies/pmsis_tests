@@ -62,8 +62,45 @@ override config_args += --config-opt=microphone0/stim_1=$(STIM_WAV_0_1)
 override config_args += --config-opt=microphone0/stim_2=$(STIM_WAV_0_2)
 override config_args += --config-opt=microphone0/stim_3=$(STIM_WAV_0_3)
 
-override config_args += --config-opt=board/components/mic0/mic/stim=$(STIM_WAV_0_0)
 override config_args += --config-opt=board/components/sink0/sink/outfile=outfile.hex
+
+ifeq '$(use_fft)' '1'
+override config_args += --config-opt=board/components/mic0/mic/stim=$(STIM_WAV_0_0)
+APP_CFLAGS += -DUSE_FFT=1
+else
+incr0 = $(shell echo $$((((1<<$(WORD_SIZE)) / $(NB_ELEM)) * 3 + 1)))
+incr1 = $(shell echo $$((((1<<$(WORD_SIZE)) / $(NB_ELEM)) * 4 + 16)))
+incr2 = $(shell echo $$((((1<<$(WORD_SIZE)) / $(NB_ELEM)) * 5 + 392)))
+incr3 = $(shell echo $$((((1<<$(WORD_SIZE)) / $(NB_ELEM)) * 6 + 8765)))
+
+start0 = 0
+start1 = 11
+start2 = 271
+start3 = 3931
+
+override config_args += --config-opt=board/components/mic0/mic/stim_mode=incr
+override config_args += --config-opt=board/components/mic0/mic/stim_incr_start=$(start0)
+override config_args += --config-opt=board/components/mic0/mic/stim_incr_value=$(incr0)
+
+override config_args += --config-opt=board/components/mic1/mic/stim_mode=incr
+override config_args += --config-opt=board/components/mic1/mic/stim_incr_start=$(start1)
+override config_args += --config-opt=board/components/mic1/mic/stim_incr_value=$(incr1)
+
+override config_args += --config-opt=board/components/mic2/mic/stim_mode=incr
+override config_args += --config-opt=board/components/mic2/mic/stim_incr_start=$(start2)
+override config_args += --config-opt=board/components/mic2/mic/stim_incr_value=$(incr2)
+
+override config_args += --config-opt=board/components/mic3/mic/stim_mode=incr
+override config_args += --config-opt=board/components/mic3/mic/stim_incr_start=$(start3)
+override config_args += --config-opt=board/components/mic3/mic/stim_incr_value=$(incr3)
+
+APP_CFLAGS += \
+	-DINCR_VALUE0_0=$(incr0) -DINCR_START0_0=$(start0) \
+	-DINCR_VALUE0_1=$(incr1) -DINCR_START0_1=$(start1) \
+	-DINCR_VALUE0_2=$(incr2) -DINCR_START0_2=$(start2) \
+	-DINCR_VALUE0_3=$(incr3) -DINCR_START0_3=$(start3)
+
+endif
 
 
 override APP_CFLAGS += -O3 -g -DSAMPLING_FREQ_0=$(SAMPLING_FREQ_0) -DSAMPLING_FREQ_1=$(SAMPLING_FREQ_1) \

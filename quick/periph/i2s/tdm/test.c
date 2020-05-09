@@ -90,6 +90,63 @@ void fill_tx_buffer(int i, int j)
 #endif
 
 
+#ifndef USE_FFT
+static int get_incr_start(int start_value, int itf, int channel, int *error)
+{
+  uint32_t incr = 0;
+  uint32_t start = 0;
+  if (itf == 0)
+  {
+    if (channel == 0)
+    {
+      incr = INCR_VALUE0_0;
+      start = INCR_START0_0;
+    }
+    else if (channel == 1)
+    {
+      incr = INCR_VALUE0_1;
+      start = INCR_START0_1;
+    }
+    else if (channel == 2)
+    {
+      incr = INCR_VALUE0_2;
+      start = INCR_START0_2;
+    }
+    else if (channel == 3)
+    {
+      incr = INCR_VALUE0_3;
+      start = INCR_START0_3;
+    }
+  }
+
+  incr &= (1 << WORD_SIZE) - 1;
+  start &= (1 << WORD_SIZE) - 1;
+
+  if (((start_value - start) % incr) != 0)
+  {
+    *error = 1;
+    return 0;
+  }
+  return start_value;
+}
+
+static int get_incr_next(uint32_t value, int itf, int channel)
+{
+  if (itf == 0)
+    if (channel == 0)
+      return value + INCR_VALUE0_0;
+    else if (channel == 1)
+      return value + INCR_VALUE0_1;
+    else if (channel == 2)
+      return value + INCR_VALUE0_2;
+    else if (channel == 3)
+      return value + INCR_VALUE0_3;
+
+  return value + 1;
+}
+#endif
+
+
 static int get_sampling_freq(int itf)
 {
   if (itf == 0)
@@ -139,7 +196,7 @@ static int get_signal_freq(int itf, int channel)
   return SIGNAL_FREQ_0_0;
 }
 
-static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
+static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq, int itf, int channel)
 {
 #ifdef USE_FFT
   for (int i=0; i<NB_ELEM; i++)
@@ -180,7 +237,31 @@ static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq)
 
   return error > ERROR_RATE;
 #else
+
+  uint16_t *check_buff = (uint16_t *)buff;
+  int error = 0;
+  uint16_t expected = get_incr_start(check_buff[0], itf, channel, &error);  
+  if (error)
+  {
+    printf("Could not find initial value from buffer (value: 0x%x)\n", check_buff[0]);
+    return -1;
+  }
+
+  for (int i=0; i<NB_ELEM; i++)
+  {
+    if (expected != check_buff[i])
+    {
+      printf("Error at index %d, expected %x, got %x\n", i, expected, check_buff[i]);
+      return -1;
+    }
+
+    expected = get_incr_next(expected, itf, channel);
+  }
+
+  printf("Buffer check success\n");
+
   return 0;
+
 #endif
 }
 
@@ -246,6 +327,7 @@ static int test_entry()
     i2s_conf.options |= PI_I2S_OPT_TDM;
 #endif
 
+
     pi_open_from_conf(&i2s[i], &i2s_conf);
 
     if (pi_i2s_open(&i2s[i]))
@@ -253,17 +335,17 @@ static int test_entry()
       
 #if defined(TDM) && TDM == 1
 #ifdef RX_ENABLED
-    i2s_conf.options = PI_I2S_OPT_PINGPONG | PI_I2S_OPT_ENABLED;
+    i2s_conf.options |= PI_I2S_OPT_PINGPONG | PI_I2S_OPT_IS_RX | PI_I2S_OPT_ENABLED;
     i2s_conf.block_size = BLOCK_SIZE;
     i2s_conf.word_size = WORD_SIZE;
 #endif
 #ifdef TX_ENABLED
-    i2s_conf.options = PI_I2S_OPT_PINGPONG | PI_I2S_OPT_IS_TX | PI_I2S_OPT_ENABLED;
+    i2s_conf.options |= PI_I2S_OPT_PINGPONG | PI_I2S_OPT_IS_TX | PI_I2S_OPT_ENABLED;
     i2s_conf.block_size = BLOCK_SIZE;
     i2s_conf.word_size = WORD_SIZE;
 #endif
 #ifdef LOOPBACK_ENABLED
-    i2s_conf.tx_options |= PI_I2S_OPT_LOOPBACK;
+    i2s_conf.options |= PI_I2S_OPT_LOOPBACK;
 #endif
 
     for (int j=0; j<NB_CHANNELS; j++)
@@ -370,7 +452,6 @@ static int test_entry()
     }
   }
 #else
-    printf("%s %d\n", __FILE__, __LINE__);
   printf("Raw buffer size\n");
   for (int j=0; j<BLOCK_SIZE/ELEM_SIZE; j++)
   {
@@ -441,13 +522,15 @@ static int test_entry()
     {
       printf("Checking itf %d channel %d\n", i, k);
 
+#ifdef USE_FFT
       if (check_error((1ULL<<(WORD_SIZE-1)) - 1, max[i][k], 0.2))
         return -1;
 
       if (check_error(-(1LL<<(WORD_SIZE-1)), min[i][k], 0.2))
         return -1;
+#endif
 
-      errors += check_buffer(&buff[i][0][k*BUFF_SIZE], get_sampling_freq(i), get_signal_freq(i, k));
+      errors += check_buffer(&buff[i][0][k*BUFF_SIZE], get_sampling_freq(i), get_signal_freq(i, k), i, k);
     }
   }
 #endif
