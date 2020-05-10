@@ -50,7 +50,7 @@ static struct pi_device i2s[NB_ITF];
 static int max[NB_ITF][NB_CHANNELS];
 static int min[NB_ITF][NB_CHANNELS];
 
-static pi_task_t tasks[NB_ITF][NB_CHANNELS];
+static pi_task_t i2s_tasks[NB_ITF][NB_CHANNELS];
 
 
 
@@ -133,6 +133,7 @@ static int get_incr_start(int start_value, int itf, int channel, int *error)
 static int get_incr_next(uint32_t value, int itf, int channel)
 {
   if (itf == 0)
+  {
     if (channel == 0)
       return value + INCR_VALUE0_0;
     else if (channel == 1)
@@ -141,6 +142,7 @@ static int get_incr_next(uint32_t value, int itf, int channel)
       return value + INCR_VALUE0_2;
     else if (channel == 3)
       return value + INCR_VALUE0_3;
+  }
 
   return value + 1;
 }
@@ -271,16 +273,6 @@ static int test_entry()
 
   printf("Entering main controller\n");
 
-  pi_bsp_init();
-
-  pi_pad_set_function(PI_PAD_37_B14_I2S1_SDI, PI_PAD_37_B14_I2S1_SDI_FUNC0);
-  pi_pad_set_function(PI_PAD_36_A15_I2S1_WS, PI_PAD_36_A15_I2S1_WS_FUNC0);
-  pi_pad_set_function(PI_PAD_35_B13_I2S1_SCK, PI_PAD_35_B13_I2S1_SCK_FUNC0);
-  pi_pad_set_function(PI_PAD_55_A24_I2S0_SCK, PI_PAD_55_A24_I2S0_SCK_FUNC0);
-  pi_pad_set_function(PI_PAD_56_A26_I2S0_WS, PI_PAD_56_A26_I2S0_WS_FUNC0);
-  pi_pad_set_function(PI_PAD_57_B23_I2S0_SDI, PI_PAD_57_B23_I2S0_SDI_FUNC0);
-
-
   for (int i=0; i<NB_ITF; i++)
   {
     buff[i][0] = pi_l2_malloc(BUFF_SIZE*NB_CHANNELS);
@@ -386,7 +378,7 @@ static int test_entry()
     for (int j=0; j<NB_CHANNELS; j++)
     {
 #ifdef TX_ENABLED
-      pi_i2s_channel_write_async(&i2s[i], j, NULL, size, pi_task_block(&tasks[i][j]));
+      pi_i2s_channel_write_async(&i2s[i], j, NULL, size, pi_task_block(&i2s_tasks[i][j]));
 #endif
 #ifdef RX_ENABLED
       pi_i2s_channel_read(&i2s[i], j, &chunk[i][j], &size);
@@ -401,7 +393,7 @@ static int test_entry()
     for (int j=0; j<NB_CHANNELS; j++)
     {
 #ifdef TX_ENABLED
-      pi_task_wait_on(&tasks[i][j]);
+      pi_task_wait_on(&i2s_tasks[i][j]);
 #endif
     }
   }
