@@ -190,13 +190,14 @@ static int test_entry()
 
   pi_bsp_init();
 
+#if defined(__GAP8__) || (defined(PULP_CHIP_FAMILY) && (PULP_CHIP_FAMILY == CHIP_GAP8))
   pi_pad_set_function(PI_PAD_37_B14_I2S1_SDI, PI_PAD_37_B14_I2S1_SDI_FUNC0);
   pi_pad_set_function(PI_PAD_36_A15_I2S1_WS, PI_PAD_36_A15_I2S1_WS_FUNC0);
   pi_pad_set_function(PI_PAD_35_B13_I2S1_SCK, PI_PAD_35_B13_I2S1_SCK_FUNC0);
   pi_pad_set_function(PI_PAD_55_A24_I2S0_SCK, PI_PAD_55_A24_I2S0_SCK_FUNC0);
   pi_pad_set_function(PI_PAD_56_A26_I2S0_WS, PI_PAD_56_A26_I2S0_WS_FUNC0);
   pi_pad_set_function(PI_PAD_57_B23_I2S0_SDI, PI_PAD_57_B23_I2S0_SDI_FUNC0);
-
+#endif
 
   for (int i=0; i<NB_ITF; i++)
   {
