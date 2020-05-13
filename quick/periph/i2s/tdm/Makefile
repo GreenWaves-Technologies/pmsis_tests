@@ -51,16 +51,12 @@ ifeq '$(LOOPBACK_ENABLED)' '1'
 APP_CFLAGS += -DLOOPBACK_ENABLED
 endif
 
+override config_args += --config-opt=board/components/mic0/mic/width=$(WORD_SIZE)
+override config_args += --config-opt=board/components/mic1/mic/width=$(WORD_SIZE)
+override config_args += --config-opt=board/components/mic2/mic/width=$(WORD_SIZE)
+override config_args += --config-opt=board/components/mic3/mic/width=$(WORD_SIZE)
 
 override config_args += --config-opt=**/runner/gvsoc_dpi/enabled=true
-
-
-override config_args += --config-opt=microphone0/width=$(WORD_SIZE)
-
-override config_args += --config-opt=microphone0/stim_0=$(STIM_WAV_0_0)
-override config_args += --config-opt=microphone0/stim_1=$(STIM_WAV_0_1)
-override config_args += --config-opt=microphone0/stim_2=$(STIM_WAV_0_2)
-override config_args += --config-opt=microphone0/stim_3=$(STIM_WAV_0_3)
 
 override config_args += --config-opt=board/components/sink0/sink/outfile=outfile.hex
 

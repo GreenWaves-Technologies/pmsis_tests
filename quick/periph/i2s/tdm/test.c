@@ -32,10 +32,18 @@
 #endif
 
 #define ERROR_RATE 20
-#if WORD_SIZE == 32
+#if WORD_SIZE == 32 || WORD_SIZE == 24
 #define ELEM_SIZE 4
+#define ELEM_TYPE uint32_t
+#define MEM_WORD_SIZE 32
 #elif WORD_SIZE == 16
 #define ELEM_SIZE 2
+#define ELEM_TYPE uint16_t
+#define MEM_WORD_SIZE 16
+#elif WORD_SIZE == 8
+#define ELEM_SIZE 1
+#define ELEM_TYPE uint8_t
+#define MEM_WORD_SIZE 8
 #else
 #error Unsupported word size
 #endif
@@ -122,6 +130,8 @@ static int get_incr_start(int start_value, int itf, int channel, int *error)
   incr &= (1 << WORD_SIZE) - 1;
   start &= (1 << WORD_SIZE) - 1;
 
+  printf("Looking for value %x\n", start_value, incr, start);
+
   if (((start_value - start) % incr) != 0)
   {
     *error = 1;
@@ -130,7 +140,7 @@ static int get_incr_start(int start_value, int itf, int channel, int *error)
   return start_value;
 }
 
-static int get_incr_next(uint32_t value, int itf, int channel)
+static int __attribute__((noinline)) get_incr_next(uint32_t value, int itf, int channel)
 {
   if (itf == 0)
   {
@@ -240,9 +250,11 @@ static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq, int i
   return error > ERROR_RATE;
 #else
 
-  uint16_t *check_buff = (uint16_t *)buff;
+  ELEM_TYPE *check_buff = (ELEM_TYPE *)buff;
+  ELEM_TYPE expected;
+
   int error = 0;
-  uint16_t expected = get_incr_start(check_buff[0], itf, channel, &error);  
+  expected = get_incr_start(check_buff[0], itf, channel, &error);  
   if (error)
   {
     printf("Could not find initial value from buffer (value: 0x%x)\n", check_buff[0]);
@@ -251,6 +263,8 @@ static int check_buffer(uint8_t *buff, int sampling_freq, int signal_freq, int i
 
   for (int i=0; i<NB_ELEM; i++)
   {
+    expected &= (1<<WORD_SIZE) - 1;
+
     if (expected != check_buff[i])
     {
       printf("Error at index %d, expected %x, got %x\n", i, expected, check_buff[i]);
@@ -314,6 +328,7 @@ static int test_entry()
     i2s_conf.format = PI_I2S_FMT_DATA_FORMAT_I2S;
 #endif
     i2s_conf.word_size = WORD_SIZE;
+    i2s_conf.mem_word_size = MEM_WORD_SIZE;
     i2s_conf.channels = NB_CHANNELS;
 #if defined(TDM) && TDM == 1
     i2s_conf.options |= PI_I2S_OPT_TDM;
@@ -523,6 +538,8 @@ static int test_entry()
 #endif
 
       errors += check_buffer(&buff[i][0][k*BUFF_SIZE], get_sampling_freq(i), get_signal_freq(i, k), i, k);
+      if (errors)
+      return -1;
     }
   }
 #endif
