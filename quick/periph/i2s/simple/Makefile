@@ -42,6 +42,8 @@ endif
 
 override config_args += --config-opt=**/runner/gvsoc_dpi/enabled=true
 
+override config_args += --config-opt=board/components/mic0/mic/enabled=true
+
 override config_args += --config-opt=microphone0/width=$(WORD_SIZE)
 override config_args += --config-opt=microphone1/width=$(WORD_SIZE)
 

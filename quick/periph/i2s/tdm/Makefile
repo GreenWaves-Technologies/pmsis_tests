@@ -51,6 +51,11 @@ ifeq '$(LOOPBACK_ENABLED)' '1'
 APP_CFLAGS += -DLOOPBACK_ENABLED
 endif
 
+override config_args += --config-opt=board/components/mic0/mic/enabled=true
+override config_args += --config-opt=board/components/mic1/mic/enabled=true
+override config_args += --config-opt=board/components/mic2/mic/enabled=true
+override config_args += --config-opt=board/components/mic3/mic/enabled=true
+
 override config_args += --config-opt=board/components/mic0/mic/width=$(WORD_SIZE)
 override config_args += --config-opt=board/components/mic1/mic/width=$(WORD_SIZE)
 override config_args += --config-opt=board/components/mic2/mic/width=$(WORD_SIZE)

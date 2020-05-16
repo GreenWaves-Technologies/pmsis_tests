@@ -56,6 +56,7 @@ override config_args += --config-opt=**/runner/gvsoc_dpi/enabled=true
 
 
 override config_args += --config-opt=microphone0/width=$(WORD_SIZE)
+override config_args += --config-opt=board/components/mic0/mic/enabled=true
 
 override config_args += --config-opt=microphone0/stim_0=$(STIM_WAV_0_0)
 override config_args += --config-opt=microphone0/stim_1=$(STIM_WAV_0_1)
