@@ -12,6 +12,8 @@
 
 #define NB_GPIO_ITER 20
 
+static volatile int received;
+
 
 static int gpio_loopbacks[][2] = {
     { 14, 15 },
@@ -22,8 +24,13 @@ static int gpio_loopbacks[][2] = {
 };
 
 
+static void gpio_callback(void *arg)
+{
+    received++;
+}
 
-int check_gpio_loopback(pi_device_t *bench, int output, int input)
+
+int check_gpio_loopback(pi_device_t *bench, int output, int input, int irq_flags)
 {
     int errors = 0;
 
@@ -32,6 +39,7 @@ int check_gpio_loopback(pi_device_t *bench, int output, int input)
     struct pi_gpio_conf gpio_conf;
     pi_device_t gpio_in;
     pi_device_t gpio_out;
+    pi_task_t task;
 
     pi_gpio_conf_init(&gpio_conf);
 
@@ -50,6 +58,8 @@ int check_gpio_loopback(pi_device_t *bench, int output, int input)
         return -1;
 
     
+    pi_testbench_gpio_loopback(bench, output, input, 1);
+
     if (pi_gpio_pin_configure(&gpio_in, input, PI_GPIO_INPUT))
         return -1;
 
@@ -59,26 +69,28 @@ int check_gpio_loopback(pi_device_t *bench, int output, int input)
     pi_pad_set_function(input, 1);
     pi_pad_set_function(output, 1);
 
+    pi_gpio_pin_notif_configure(&gpio_in, input, irq_flags);
+    pi_gpio_pin_notif_clear(&gpio_in, input);
 
-    pi_testbench_gpio_loopback(bench, output, input, 1);
+    pi_task_callback(&task, gpio_callback, NULL);
 
-    int current_val = 1;
+    if (pi_gpio_pin_task_add(&gpio_in, input, &task, irq_flags))
+        return -1;
+
 
     for (int i=0; i<NB_GPIO_ITER; i++)
     {
-        pi_gpio_pin_write(&gpio_out, output, current_val);
+        received = 0;
+        pi_gpio_pin_write(&gpio_out, output, 0);
+        pi_gpio_pin_write(&gpio_out, output, 1);
 
-        uint32_t value;
-        pi_gpio_pin_read(&gpio_in, input, &value);
-
-        if (value != current_val)
+        while(!received)
         {
-            printf("Read wrong GPIO value (expected %d, got %d)\n", current_val, value);
-            errors++;
-            break;
+            pi_yield();
         }
 
-        current_val ^= 1;
+        if (received != 1)
+            return -1;
     }
 
 
@@ -110,7 +122,7 @@ static int test_entry()
         int output = gpio_loopbacks[index][0];
         int input = gpio_loopbacks[index][1];
 
-        errors += check_gpio_loopback(&bench, output, input);
+        errors += check_gpio_loopback(&bench, output, input, PI_GPIO_NOTIF_RISE);
 
         index++;
     } 
