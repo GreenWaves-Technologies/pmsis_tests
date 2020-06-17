@@ -41,6 +41,9 @@
 
 #define DATA_SIZE 8
 
+#define ERROR_CHECK 0
+#define WRITE_DATA 0
+
 //=========================================================================
 // STATICS
 //=========================================================================
@@ -88,19 +91,24 @@ static void print_status_code(int status)
             printf("Status: LAST_DATA_ACK\n");
             break;
         default:
-            printf("Status: ERROR - Unknown status\n");
+            printf("Status: ERROR - Unknown status %d\n", status);
             break;
     }
 }
 
 
-static void _writeMemory (Aardvark handle, u08 device, u08 addr, u08* data)
+static int _writeReadMemory (Aardvark handle, u08 device, u08 addr, u08* data)
 {
-    u08 data_out[128];
+    u08 data_in[DATA_SIZE];
+    u08 addr_read[2] = { 3, 0 };
     u16 count = 0;
+    u16 count_in = 0;
     int status = 0;
+    int nb_errors = 0;
 
-    data_out[0] = 3; // LSB addr
+#if WRITE_DATA
+    u08 data_out[128];
+    data_out[0] = 4; // LSB addr
     data_out[1] = 0; // MSB addr
     for (int i = 2; i<DATA_SIZE + 2; i++)
     {
@@ -113,45 +121,40 @@ static void _writeMemory (Aardvark handle, u08 device, u08 addr, u08* data)
     {
         printf("ERROR: Expected to write %d bytes, instead wrote %d\n", DATA_SIZE + 2, count);
     }
-}
-
-static int _readMemory (Aardvark handle, u08 device, u08 addr, u08* data)
-{
-    u16 count;
-    int nb_errors = 0;
-    int status = 0;
-    u08 data_in[DATA_SIZE];
+#endif
 
     // Write the address
     //aa_i2c_write(handle, device, AA_I2C_NO_STOP, 1, &addr);
 
     // Read from EEPROM current address
-    status = aa_i2c_read_ext(handle, device, AA_I2C_NO_FLAGS, DATA_SIZE, data_in, &count);
+    status = aa_i2c_write_read(handle, device, AA_I2C_NO_FLAGS, 2, addr_read, &count, DATA_SIZE, data_in, &count_in);
     print_status_code(status);
-    if (count < 0) {
-        printf("error: %s\n", aa_status_string(count));
+    if (count_in < 0) {
+        printf("error: %s\n", aa_status_string(count_in));
         return 1;
     }
-    if (count == 0) {
+    if (count_in == 0) {
         printf("error: no bytes read\n");
         printf("  are you sure you have the right slave address?\n");
         return 1;
     }
-    else if (count != DATA_SIZE) {
-        printf("error: read %d bytes (expected %d)\n", count, DATA_SIZE);
+    else if (count_in != DATA_SIZE) {
+        printf("error: read %d bytes (expected %d)\n", count_in, DATA_SIZE);
         return 1;
     }
 
     // Dump the data to the screen
     printf("\nData read from device:");
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; i < count_in; ++i) {
         if ((i&0x0f) == 0)      printf("\n%04x:  ", addr+i);
         printf("%02x ", data_in[i] & 0xff);
+#if ERROR_CHECK
         if (data_in[i] != data[i])
         {
             printf("ERROR: expected %2x, got %2x\n", data[i], data_in[i]);
             nb_errors++;
         }
+#endif
         if (((i+1)&0x07) == 0)  printf(" ");
     }
     printf("\n");
@@ -225,16 +228,13 @@ int main (int argc, char *argv[]) {
     //BURST
     //TODO also mix aa_i2c_write_read instead
     int nb_errors = 0;
-    //for (int i = 0; i < 10000; i++)
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < 10000; i++)
     {
         printf("try #%d\n",i);
         generate_data();
         // pass data as argument to write
-        _writeMemory(handle, device, addr, data);
-        // and verify that the data has correctly been written
-        aa_sleep_ms(5);
-        nb_errors += _readMemory(handle, device, addr, data);
+        nb_errors += _writeReadMemory(handle, device, addr, data);
+        //aa_sleep_ms(20);
     }
     printf("Total of errors: %d\n",nb_errors);
 

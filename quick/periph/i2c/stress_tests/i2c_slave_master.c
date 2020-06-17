@@ -27,7 +27,7 @@
 
 #define INTERFACE_SLAVE   (1)
 #define INTERFACE_MASTER  (0)
-#define MASTER_ENABLED (0)
+#define MASTER_ENABLED (1)
 
 #define PRINTF(...)
 //#define PRINTF(...) printf(__VA_ARGS__)
@@ -318,15 +318,23 @@ int master_launch(void)
     }
 
     /* send requests and verify results */
-    uint8_t addr_buff[2] = {4 , 0xFF};
-    uint8_t read_buff[1] = { 0xde };
+    uint8_t write_buff[3] = {3 , 0, 0};
+    uint8_t read_buff[1] = { 0 };
+    int status;
     while(1)
     {
-        printf("writing and reading\n");
+        write_buff[2]++; // increase the first written byte, so that we can tell if the master is working
         pi_i2c_xfer_flags_e flag = PI_I2C_XFER_STOP | PI_I2C_XFER_START;
-        pi_i2c_write(master_dev, addr_buff, 2, flag);
-        pi_time_wait_us(1000 * 1000 * 2);
-        pi_i2c_read(master_dev, read_buff, 2, flag);
+        status = pi_i2c_write(master_dev, write_buff, 3, flag);
+        if (status != PI_OK)
+        {
+            printf("Write status: %d\n", status);
+        }
+        status = pi_i2c_read(master_dev, read_buff, 2, flag);
+        if (status != PI_OK)
+        {
+            printf("Read status: %d\n", status);
+        }
     }
 
     /* close and free */
