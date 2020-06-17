@@ -55,6 +55,13 @@ static int32_t eeprom_current_address = 0;
 /* buffer containing EEPROM memory */
 static uint8_t eeprom_memory[BUFF_SIZE * 4];
 
+
+/* master device */
+static pi_device_t* master_dev = NULL;
+/* master async read buffer */
+static uint8_t async_read_buff[2] = { 0 , 0 };
+
+
 // ===================================================
 // FUNCTIONS
 // ===================================================
@@ -90,6 +97,40 @@ static void dump_eeprom_memory(void)
         PRINTF("%x ", eeprom_memory[i]);
     }
     PRINTF("\n");
+}
+
+/* flag for async read/write */
+static volatile uint8_t done = 0;
+static volatile uint8_t async_error = 0;
+
+/* Callback for end of RX transfer. */
+static void __end_of_rx(void *arg)
+{
+    pi_task_t* task = (pi_task_t *) arg;
+    int status = pi_i2c_get_request_status(task);
+    if (status != PI_OK)
+    {
+        async_error = status;
+    }
+    async_error = 0;
+    done = 1;
+}
+
+/* Callback for end of TX transfer. */
+static void __end_of_tx(void *arg)
+{
+    pi_task_t* task = (pi_task_t *) arg;
+    pi_task_t* cb = (pi_task_t *) task->arg[2];
+    int status = pi_i2c_get_request_status(task);
+    if (status != PI_OK)
+    {
+        async_error = status;
+        done =1;
+    }
+    else
+    {
+        pi_i2c_read_async(master_dev, async_read_buff, 2, PI_I2C_XFER_START | PI_I2C_XFER_STOP, cb);
+    }
 }
 
 /**
@@ -309,7 +350,7 @@ int master_setup(pi_device_t* master_device, uint8_t i2c_interface)
 int master_launch(void)
 {
     /* initialize device */
-    pi_device_t* master_dev = pi_l2_malloc(sizeof(pi_device_t));
+    master_dev = pi_l2_malloc(sizeof(pi_device_t));
 
     if (master_setup(master_dev, INTERFACE_MASTER))
     {
@@ -319,12 +360,14 @@ int master_launch(void)
 
     /* send requests and verify results */
     uint8_t write_buff[3] = {3 , 0, 0};
-    uint8_t read_buff[1] = { 0 };
+    uint8_t read_buff[2] = { 0 , 0 };
+    pi_i2c_xfer_flags_e flag = PI_I2C_XFER_STOP | PI_I2C_XFER_START;
     int status;
     while(1)
     {
+#if 1
+        // Synchronous tests
         write_buff[2]++; // increase the first written byte, so that we can tell if the master is working
-        pi_i2c_xfer_flags_e flag = PI_I2C_XFER_STOP | PI_I2C_XFER_START;
         status = pi_i2c_write(master_dev, write_buff, 3, flag);
         if (status != PI_OK)
         {
@@ -335,6 +378,27 @@ int master_launch(void)
         {
             printf("Read status: %d\n", status);
         }
+#endif
+
+#if 1
+        // Asynchronous tests
+        write_buff[2]++; // increase the first written byte, so that we can tell if the master is working
+        pi_task_t callback_tx, callback_rx;
+        pi_task_callback(&callback_tx, __end_of_tx, &callback_tx);
+        callback_tx.arg[2] = (int) &callback_rx;
+        pi_task_callback(&callback_rx, __end_of_rx, &callback_rx);
+        pi_i2c_write_async(master_dev, write_buff, 3, flag, &callback_tx);
+        while (!done)
+        {
+            pi_yield();
+        }
+        if (async_error)
+        {
+            printf("Async error: %d\n", async_error);
+        }
+        done = 0;
+        async_error = 0;
+#endif
     }
 
     /* close and free */
