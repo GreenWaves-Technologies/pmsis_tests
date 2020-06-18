@@ -17,7 +17,7 @@ static int gpio_loopbacks[][2] = {
     { 14, 15 },
     { 48, 49 },
     { 78, 79 },
-    { 86, 87 },
+    //{ 86, 87 }, TO BE REACTIVATED ASAP, failing on HW
     { -1, -1 }
 };
 
