@@ -26,7 +26,8 @@
 #define TEST_VALUE_BASE (0x01)
 
 #define INTERFACE_SLAVE   (1)
-#define INTERFACE_MASTER  (0)
+#define INTERFACE_MASTER0  (0)
+#define INTERFACE_MASTER1  (2)
 #define MASTER_ENABLED (1)
 
 #define PRINTF(...)
@@ -57,7 +58,8 @@ static uint8_t eeprom_memory[BUFF_SIZE * 4];
 
 
 /* master device */
-static pi_device_t* master_dev = NULL;
+static pi_device_t* master_dev0 = NULL;
+static pi_device_t* master_dev1 = NULL;
 /* master async read buffer */
 static uint8_t async_read_buff[2] = { 0 , 0 };
 
@@ -129,7 +131,7 @@ static void __end_of_tx(void *arg)
     }
     else
     {
-        pi_i2c_read_async(master_dev, async_read_buff, 2, PI_I2C_XFER_START | PI_I2C_XFER_STOP, cb);
+        pi_i2c_read_async(master_dev0, async_read_buff, 2, PI_I2C_XFER_START | PI_I2C_XFER_STOP, cb);
     }
 }
 
@@ -256,7 +258,7 @@ int slave_setup(pi_device_t* slave_device, uint8_t i2c_interface)
 
     /* set addresses (use both slots) */
     pi_i2c_slave_conf_set_addr0(conf, I2C_SLAVE_ADDR0, 0x1F, 0, 1, 0);
-    //pi_i2c_slave_conf_set_addr1(conf, I2C_SLAVE_ADDR0_10BITS, 0x1F, 1, 1, 0);
+    pi_i2c_slave_conf_set_addr1(conf, I2C_SLAVE_ADDR0_10BITS, 0x1F, 1, 1, 0);
 
     /* setup RX and TX callbacks */
     conf->rx_callback = i2c_memory_emu_rx_callback;
@@ -318,7 +320,7 @@ int slave_close(void)
  * \returns -1 if initialization failed
  *          else 0
  */
-int master_setup(pi_device_t* master_device, uint8_t i2c_interface)
+int master_setup(pi_device_t* master_device, uint8_t i2c_interface, uint16_t slave_addr, int is_10bits)
 {
     int status = 0;
     struct pi_i2c_conf* conf = pi_l2_malloc(sizeof(struct pi_i2c_conf));
@@ -327,7 +329,7 @@ int master_setup(pi_device_t* master_device, uint8_t i2c_interface)
 
     conf->itf = i2c_interface;
     /* set targe slave address */
-    pi_i2c_conf_set_slave_addr(conf, I2C_SLAVE_ADDR0, 0);
+    pi_i2c_conf_set_slave_addr(conf, slave_addr, is_10bits);
     pi_i2c_conf_set_wait_cycles(conf, 0);
 
     pi_open_from_conf(master_device, conf);
@@ -347,47 +349,55 @@ int master_setup(pi_device_t* master_device, uint8_t i2c_interface)
  * \returns -1 if initialization failed
  *          else 0
  */
-int master_launch(void)
+int masters_launch(void)
 {
     /* initialize device */
-    master_dev = pi_l2_malloc(sizeof(pi_device_t));
+    master_dev0 = pi_l2_malloc(sizeof(pi_device_t));
+    master_dev1 = pi_l2_malloc(sizeof(pi_device_t));
 
-    if (master_setup(master_dev, INTERFACE_MASTER))
+    if (master_setup(master_dev0, INTERFACE_MASTER0, I2C_SLAVE_ADDR0, 0))
     {
-        PRINTF("Master configuration failed!\n");
+        PRINTF("Master 0 configuration failed!\n");
+        return -1;
+    }
+
+    if (master_setup(master_dev1, INTERFACE_MASTER1, I2C_SLAVE_ADDR0_10BITS, 1))
+    {
+        PRINTF("Master 1 configuration failed!\n");
         return -1;
     }
 
     /* send requests and verify results */
     uint8_t write_buff[3] = {3 , 0, 0};
-    uint8_t read_buff[2] = { 0 , 0 };
+    uint8_t read_buff[2] = {0 , 0};
     pi_i2c_xfer_flags_e flag = PI_I2C_XFER_STOP | PI_I2C_XFER_START;
     int status;
     while(1)
     {
-#if 1
-        // Synchronous tests
-        write_buff[2]++; // increase the first written byte, so that we can tell if the master is working
-        status = pi_i2c_write(master_dev, write_buff, 3, flag);
-        if (status != PI_OK)
-        {
-            printf("Write status: %d\n", status);
-        }
-        status = pi_i2c_read(master_dev, read_buff, 2, flag);
-        if (status != PI_OK)
-        {
-            printf("Read status: %d\n", status);
-        }
-#endif
+        // TODO use different write buffers and addresses for each master
 
-#if 1
         // Asynchronous tests
         write_buff[2]++; // increase the first written byte, so that we can tell if the master is working
         pi_task_t callback_tx, callback_rx;
         pi_task_callback(&callback_tx, __end_of_tx, &callback_tx);
         callback_tx.arg[2] = (int) &callback_rx;
         pi_task_callback(&callback_rx, __end_of_rx, &callback_rx);
-        pi_i2c_write_async(master_dev, write_buff, 3, flag, &callback_tx);
+        pi_i2c_write_async(master_dev0, write_buff, 3, flag, &callback_tx);
+
+        // Synchronous tests
+        write_buff[2]++; // increase the first written byte, so that we can tell if the master is working
+        status = pi_i2c_write(master_dev1, write_buff, 3, flag);
+        if (status != PI_OK)
+        {
+            printf("Write status: %d\n", status);
+        }
+        status = pi_i2c_read(master_dev1, read_buff, 2, flag);
+        if (status != PI_OK)
+        {
+            printf("Read status: %d\n", status);
+        }
+
+        // wait asynchronous tests
         while (!done)
         {
             pi_yield();
@@ -398,12 +408,14 @@ int master_launch(void)
         }
         done = 0;
         async_error = 0;
-#endif
     }
 
     /* close and free */
-    pi_i2c_close(master_dev);
-    pi_l2_free(master_dev, sizeof(pi_device_t));
+    pi_i2c_close(master_dev0);
+    pi_l2_free(master_dev0, sizeof(pi_device_t));
+
+    pi_i2c_close(master_dev1);
+    pi_l2_free(master_dev1, sizeof(pi_device_t));
 
     return 0;
 }
@@ -428,7 +440,7 @@ int test_main(void)
 
 #if MASTER_ENABLED
     /* launch the master */
-    if(!ret && master_launch())
+    if(!ret && masters_launch())
     {
         PRINTF("Error while running master\n");
         ret = 1;
@@ -447,7 +459,8 @@ int test_main(void)
     if(ret)
     {
         //TODO make a global error counter ? (atomic ?)
-        printf("test returned with %d errors\n",ret);
+        // volatile should be sufficient since there is only one core
+        printf("test returned with %d errors\n", ret);
     }
     pmsis_exit(ret);
     while(1);
