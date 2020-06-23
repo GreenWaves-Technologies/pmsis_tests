@@ -110,11 +110,11 @@ static void __end_of_rx(void *arg)
 {
     pi_task_t* task = (pi_task_t *) arg;
     int status = pi_i2c_get_request_status(task);
+    async_error = 0;
     if (status != PI_OK)
     {
         async_error = status;
     }
-    async_error = 0;
     done = 1;
 }
 
